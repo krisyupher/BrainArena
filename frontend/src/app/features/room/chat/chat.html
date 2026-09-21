@@ -1,0 +1,32 @@
+<div class="chat-panel">
+  <h3>{{ 'chat.title' | transloco }}</h3>
+
+  <ul class="messages">
+    @for (message of messages(); track message.id) {
+      <li [class.me]="message.userId === auth.currentUser()?.userId">
+        <div class="bubble">
+          <span class="sender">{{ message.displayName }}</span>
+          <span class="text">{{ message.text }}</span>
+        </div>
+        @if (!isReported(message)) {
+          <button type="button" class="report-btn" (click)="report(message.id)">
+            {{ 'chat.report' | transloco }}
+          </button>
+        } @else {
+          <span class="reported-tag">{{ 'chat.reported' | transloco }}</span>
+        }
+      </li>
+    } @empty {
+      <li class="empty">{{ 'chat.empty' | transloco }}</li>
+    }
+  </ul>
+
+  <form class="chat-input" [formGroup]="form" (ngSubmit)="send()">
+    <input type="text" formControlName="text" [placeholder]="'chat.placeholder' | transloco" maxlength="200" />
+    <button type="submit" [disabled]="form.invalid">{{ 'chat.send' | transloco }}</button>
+  </form>
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+</div>

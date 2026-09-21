@@ -1,0 +1,65 @@
+<div class="create-room-card">
+  @if (createdShareCode()) {
+    <div class="share-code-panel">
+      <p>{{ 'createRoom.shareCodeCreated' | transloco }}</p>
+      <p class="share-code">{{ createdShareCode() }}</p>
+      <button type="button" (click)="continueToRoom()">{{ 'lobby.join' | transloco }}</button>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <h2>{{ 'createRoom.title' | transloco }}</h2>
+
+      <label>
+        {{ 'createRoom.name' | transloco }}
+        <input type="text" formControlName="name" />
+      </label>
+
+      <label>
+        {{ 'createRoom.topic' | transloco }}
+        <select formControlName="topic">
+          @for (topic of topics; track topic) {
+            <option [value]="topic">{{ 'lobby.topic.' + topic | transloco }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        {{ 'createRoom.maxPlayers' | transloco }}
+        <input type="number" formControlName="maxPlayers" min="2" max="10" />
+      </label>
+
+      <label>
+        {{ 'createRoom.minPlayersToStart' | transloco }}
+        <input type="number" formControlName="minPlayersToStart" min="2" />
+      </label>
+
+      <label>
+        {{ 'createRoom.questionCount' | transloco }}
+        <input type="number" formControlName="questionCount" min="5" max="20" />
+      </label>
+
+      <label>
+        {{ 'createRoom.secondsPerQuestion' | transloco }}
+        <input type="number" formControlName="secondsPerQuestion" min="10" max="60" />
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" formControlName="isPrivate" />
+        {{ 'createRoom.isPrivate' | transloco }}
+      </label>
+
+      @if (errorMessage()) {
+        <p class="error">{{ errorMessage() }}</p>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="secondary" (click)="cancel()">
+          {{ 'createRoom.cancel' | transloco }}
+        </button>
+        <button type="submit" [disabled]="form.invalid || submitting()">
+          {{ 'createRoom.submit' | transloco }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

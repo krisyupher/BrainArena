@@ -1,0 +1,59 @@
+<div class="admin-page">
+  <div class="admin-header">
+    <h1>{{ 'admin.title' | transloco }}</h1>
+    <button type="button" (click)="openCreateForm()">{{ 'admin.addQuestion' | transloco }}</button>
+  </div>
+
+  <div class="import-panel">
+    <label class="file-label">
+      {{ 'admin.importFromJson' | transloco }}
+      <input type="file" accept=".json,application/json" (change)="onFileSelected($event)" [disabled]="importing()" />
+    </label>
+    @if (importResult(); as result) {
+      <p class="import-summary">
+        {{ 'admin.importSummary' | transloco: { count: result.importedCount } }}
+        @if (result.errors.length > 0) {
+          <span class="import-errors"> — {{ result.errors.join('; ') }}</span>
+        }
+      </p>
+    }
+    @if (importError()) {
+      <p class="error">{{ 'admin.importError' | transloco }}</p>
+    }
+  </div>
+
+  @if (showForm()) {
+    <app-question-form [question]="editingQuestion()" (saved)="onSaved()" (cancelled)="onCancelled()" />
+  }
+
+  <div class="topic-filter">
+    <button type="button" [class.active]="topicFilter() === null" (click)="setFilter(null)">
+      {{ 'admin.allTopics' | transloco }}
+    </button>
+    @for (topic of topics; track topic) {
+      <button type="button" [class.active]="topicFilter() === topic" (click)="setFilter(topic)">
+        {{ 'lobby.topic.' + topic | transloco }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="loading-text">{{ 'admin.loading' | transloco }}</p>
+  } @else if (questions().length === 0) {
+    <p class="empty-state">{{ 'admin.noQuestions' | transloco }}</p>
+  } @else {
+    <ul class="question-list">
+      @for (q of questions(); track q.id) {
+        <li class="question-item">
+          <div class="question-meta">
+            <span class="topic-badge">{{ 'lobby.topic.' + q.topic | transloco }}</span>
+            <span class="difficulty-badge">{{ 'admin.difficultyN' | transloco: { n: q.difficulty } }}</span>
+            <span class="language-badge">{{ q.language }}</span>
+          </div>
+          <p class="question-text">{{ q.text }}</p>
+          <button type="button" class="secondary" (click)="openEditForm(q)">{{ 'admin.edit' | transloco }}</button>
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -1,0 +1,48 @@
+.create-room-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: var(--spacing);
+  margin-bottom: var(--spacing);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    width: auto;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+
+  button {
+    flex: 1;
+  }
+
+  .secondary {
+    background: transparent;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+  }
+}
+
+.share-code-panel {
+  text-align: center;
+
+  .share-code {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--color-primary);
+    margin: var(--spacing) 0;
+  }
+
+  button {
+    width: 100%;
+  }
+}

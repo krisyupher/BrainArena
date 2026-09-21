@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BrainArena.Api/BrainArena.Api.csproj" />
+    <Project Path="src/BrainArena.Application/BrainArena.Application.csproj" />
+    <Project Path="src/BrainArena.Domain/BrainArena.Domain.csproj" />
+    <Project Path="src/BrainArena.Infrastructure/BrainArena.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BrainArena.Application.Tests/BrainArena.Application.Tests.csproj" />
+    <Project Path="tests/BrainArena.IntegrationTests/BrainArena.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

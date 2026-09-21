@@ -1,0 +1,107 @@
+{
+  "app": {
+    "title": "BrainArena",
+    "logout": "Cerrar sesión",
+    "admin": "Admin"
+  },
+  "auth": {
+    "login": {
+      "title": "Iniciar sesión",
+      "submit": "Entrar",
+      "noAccount": "¿No tienes cuenta?",
+      "goToRegister": "Regístrate"
+    },
+    "register": {
+      "title": "Crear cuenta",
+      "submit": "Crear cuenta",
+      "hasAccount": "¿Ya tienes cuenta?",
+      "goToLogin": "Inicia sesión"
+    },
+    "fields": {
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "displayName": "Nombre para mostrar"
+    },
+    "errors": {
+      "generic": "Ocurrió un error. Intenta de nuevo."
+    }
+  },
+  "lobby": {
+    "title": "Salas",
+    "createRoom": "Crear sala",
+    "noRooms": "No hay salas activas todavía. ¡Crea la primera!",
+    "join": "Unirse",
+    "players": "Jugadores",
+    "status": {
+      "Waiting": "Esperando",
+      "InProgress": "En curso",
+      "Finished": "Finalizada"
+    },
+    "topic": {
+      "Math": "Matemáticas",
+      "Geography": "Geografía",
+      "Chemistry": "Química",
+      "IcfesGeneral": "General estilo ICFES"
+    }
+  },
+  "createRoom": {
+    "title": "Crear sala",
+    "name": "Nombre de la sala",
+    "topic": "Tema",
+    "maxPlayers": "Jugadores máximos",
+    "minPlayersToStart": "Mínimo para iniciar",
+    "questionCount": "Número de preguntas",
+    "secondsPerQuestion": "Segundos por pregunta",
+    "isPrivate": "Sala privada",
+    "submit": "Crear",
+    "cancel": "Cancelar",
+    "shareCodeCreated": "Sala privada creada. Código para compartir:"
+  },
+  "room": {
+    "host": "Anfitrión",
+    "shareCode": "Código para compartir",
+    "startNow": "Iniciar ahora",
+    "waitingForHost": "Esperando a que el anfitrión inicie la partida...",
+    "leave": "Salir de la sala"
+  },
+  "match": {
+    "getReady": "¡Prepárate! La partida comienza en...",
+    "questionProgress": "Pregunta {{index}} de {{total}}",
+    "reviewing": "Revisión de la pregunta",
+    "scoreboard": "Marcador",
+    "loadingResults": "Cargando resultados...",
+    "finalResults": "Resultados finales",
+    "review": "Revisión de preguntas",
+    "backToLobby": "Volver a las salas"
+  },
+  "admin": {
+    "title": "Banco de preguntas",
+    "addQuestion": "Agregar pregunta",
+    "editQuestion": "Editar pregunta",
+    "difficulty": "Dificultad (1-3)",
+    "difficultyN": "Dificultad {{n}}",
+    "language": "Idioma",
+    "languageEs": "Español",
+    "languageEn": "Inglés",
+    "questionText": "Texto de la pregunta",
+    "markCorrect": "Marca la opción correcta y completa las 4 opciones",
+    "optionN": "Opción {{n}}",
+    "explanation": "Explicación",
+    "save": "Guardar",
+    "importFromJson": "Importar preguntas desde un archivo JSON",
+    "importSummary": "{{count}} preguntas importadas",
+    "importError": "El archivo no es un JSON válido o la importación falló.",
+    "allTopics": "Todos los temas",
+    "loading": "Cargando preguntas...",
+    "noQuestions": "No hay preguntas para este filtro todavía.",
+    "edit": "Editar"
+  },
+  "chat": {
+    "title": "Chat",
+    "placeholder": "Escribe un mensaje...",
+    "send": "Enviar",
+    "report": "Reportar",
+    "reported": "Reportado",
+    "empty": "Aún no hay mensajes."
+  }
+}

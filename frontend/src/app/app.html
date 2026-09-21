@@ -1,0 +1,34 @@
+<header class="app-header">
+  <span class="app-title">{{ 'app.title' | transloco }}</span>
+
+  <div class="app-header-actions">
+    <div class="lang-switch">
+      <button
+        type="button"
+        [class.active]="activeLang() === 'es'"
+        (click)="setLang('es')"
+      >
+        ES
+      </button>
+      <button
+        type="button"
+        [class.active]="activeLang() === 'en'"
+        (click)="setLang('en')"
+      >
+        EN
+      </button>
+    </div>
+
+    @if (auth.isAuthenticated()) {
+      @if (auth.isAdmin()) {
+        <a routerLink="/admin">{{ 'app.admin' | transloco }}</a>
+      }
+      <span class="display-name">{{ auth.currentUser()?.displayName }}</span>
+      <button type="button" (click)="logout()">{{ 'app.logout' | transloco }}</button>
+    }
+  </div>
+</header>
+
+<main>
+  <router-outlet />
+</main>

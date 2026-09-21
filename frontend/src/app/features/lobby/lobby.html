@@ -1,0 +1,49 @@
+<div class="lobby-page">
+  <div class="lobby-header">
+    <h1>{{ 'lobby.title' | transloco }}</h1>
+    <button type="button" (click)="showCreateForm.set(!showCreateForm())">
+      {{ 'lobby.createRoom' | transloco }}
+    </button>
+  </div>
+
+  @if (showCreateForm()) {
+    <app-create-room-form
+      (created)="onRoomCreated($event)"
+      (cancelled)="showCreateForm.set(false)"
+    />
+  }
+
+  @if (loading()) {
+    <ul class="room-list">
+      @for (i of [1, 2, 3]; track i) {
+        <li class="room-card skeleton"></li>
+      }
+    </ul>
+  } @else if (rooms().length === 0) {
+    <p class="empty-state">{{ 'lobby.noRooms' | transloco }}</p>
+  } @else {
+    <ul class="room-list">
+      @for (room of rooms(); track room.id) {
+        <li class="room-card">
+          <div class="room-info">
+            <span class="room-name">{{ room.name }}</span>
+            <span class="room-topic">{{ 'lobby.topic.' + room.topic | transloco }}</span>
+            <span class="room-status" [class]="'status-' + room.status">
+              {{ 'lobby.status.' + room.status | transloco }}
+            </span>
+          </div>
+          <div class="room-meta">
+            <span class="room-count">{{ 'lobby.players' | transloco }}: {{ room.playerCount }}/{{ room.maxPlayers }}</span>
+            <button
+              type="button"
+              [disabled]="room.status !== 'Waiting' || room.playerCount >= room.maxPlayers"
+              (click)="join(room)"
+            >
+              {{ 'lobby.join' | transloco }}
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -1,0 +1,39 @@
+<div class="results-page">
+  @if (loading()) {
+    <p class="loading-text">{{ 'match.loadingResults' | transloco }}</p>
+  } @else if (results(); as r) {
+    <h1>{{ 'match.finalResults' | transloco }}</h1>
+    <p class="room-name">{{ r.roomName }}</p>
+
+    <ol class="ranking">
+      @for (entry of r.ranking; track entry.userId) {
+        <li [class.me]="entry.userId === auth.currentUser()?.userId">
+          <span class="rank">#{{ entry.rank }}</span>
+          <span class="name">{{ entry.displayName }}</span>
+          <span class="score">{{ entry.score }}</span>
+        </li>
+      }
+    </ol>
+
+    <h2>{{ 'match.review' | transloco }}</h2>
+    <div class="review-list">
+      @for (item of r.review; track item.index) {
+        <div class="review-item">
+          <p class="review-question">{{ item.index + 1 }}. {{ item.text }}</p>
+          <div class="review-options">
+            @for (option of item.options; track $index) {
+              <div class="review-option" [class.correct]="$index === item.correctOptionIndex">
+                {{ option }}
+              </div>
+            }
+          </div>
+          <p class="review-explanation">{{ item.explanation }}</p>
+        </div>
+      }
+    </div>
+
+    <app-chat [roomId]="roomId" />
+
+    <a routerLink="/lobby" class="back-link">{{ 'match.backToLobby' | transloco }}</a>
+  }
+</div>

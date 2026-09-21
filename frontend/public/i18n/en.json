@@ -1,0 +1,107 @@
+{
+  "app": {
+    "title": "BrainArena",
+    "logout": "Log out",
+    "admin": "Admin"
+  },
+  "auth": {
+    "login": {
+      "title": "Log in",
+      "submit": "Log in",
+      "noAccount": "Don't have an account?",
+      "goToRegister": "Sign up"
+    },
+    "register": {
+      "title": "Create account",
+      "submit": "Create account",
+      "hasAccount": "Already have an account?",
+      "goToLogin": "Log in"
+    },
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "displayName": "Display name"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "lobby": {
+    "title": "Rooms",
+    "createRoom": "Create room",
+    "noRooms": "No active rooms yet. Create the first one!",
+    "join": "Join",
+    "players": "Players",
+    "status": {
+      "Waiting": "Waiting",
+      "InProgress": "In progress",
+      "Finished": "Finished"
+    },
+    "topic": {
+      "Math": "Math",
+      "Geography": "Geography",
+      "Chemistry": "Chemistry",
+      "IcfesGeneral": "ICFES-style General"
+    }
+  },
+  "createRoom": {
+    "title": "Create room",
+    "name": "Room name",
+    "topic": "Topic",
+    "maxPlayers": "Max players",
+    "minPlayersToStart": "Min players to start",
+    "questionCount": "Number of questions",
+    "secondsPerQuestion": "Seconds per question",
+    "isPrivate": "Private room",
+    "submit": "Create",
+    "cancel": "Cancel",
+    "shareCodeCreated": "Private room created. Share code:"
+  },
+  "room": {
+    "host": "Host",
+    "shareCode": "Share code",
+    "startNow": "Start now",
+    "waitingForHost": "Waiting for the host to start the match...",
+    "leave": "Leave room"
+  },
+  "match": {
+    "getReady": "Get ready! The match starts in...",
+    "questionProgress": "Question {{index}} of {{total}}",
+    "reviewing": "Question review",
+    "scoreboard": "Scoreboard",
+    "loadingResults": "Loading results...",
+    "finalResults": "Final results",
+    "review": "Question review",
+    "backToLobby": "Back to rooms"
+  },
+  "admin": {
+    "title": "Question bank",
+    "addQuestion": "Add question",
+    "editQuestion": "Edit question",
+    "difficulty": "Difficulty (1-3)",
+    "difficultyN": "Difficulty {{n}}",
+    "language": "Language",
+    "languageEs": "Spanish",
+    "languageEn": "English",
+    "questionText": "Question text",
+    "markCorrect": "Mark the correct option and fill in all 4 options",
+    "optionN": "Option {{n}}",
+    "explanation": "Explanation",
+    "save": "Save",
+    "importFromJson": "Import questions from a JSON file",
+    "importSummary": "{{count}} questions imported",
+    "importError": "The file isn't valid JSON, or the import failed.",
+    "allTopics": "All topics",
+    "loading": "Loading questions...",
+    "noQuestions": "No questions for this filter yet.",
+    "edit": "Edit"
+  },
+  "chat": {
+    "title": "Chat",
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "report": "Report",
+    "reported": "Reported",
+    "empty": "No messages yet."
+  }
+}

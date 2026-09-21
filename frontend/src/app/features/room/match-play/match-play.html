@@ -1,0 +1,63 @@
+<div class="match-play-page">
+  @if (phase() === 'countdown') {
+    <div class="countdown-panel">
+      <h1>{{ 'match.getReady' | transloco }}</h1>
+      <p class="countdown-number">{{ secondsLeft() }}</p>
+    </div>
+  }
+
+  @if (phase() === 'question' && currentQuestion(); as q) {
+    <div class="question-panel">
+      <p class="progress">{{ 'match.questionProgress' | transloco: { index: q.index + 1, total: q.totalQuestions } }}</p>
+      <p class="time-left">{{ secondsLeft() }}s</p>
+      <h2>{{ q.text }}</h2>
+
+      <div class="options">
+        @for (option of q.options; track $index) {
+          <button
+            type="button"
+            class="option"
+            [class.selected]="selectedOption() === $index"
+            [disabled]="answerLocked()"
+            (click)="selectOption($index)"
+          >
+            {{ option }}
+          </button>
+        }
+      </div>
+
+      @if (errorMessage()) {
+        <p class="error">{{ errorMessage() }}</p>
+      }
+    </div>
+  }
+
+  @if (phase() === 'reveal' && reveal(); as rv) {
+    <div class="reveal-panel">
+      <p class="progress">{{ 'match.reviewing' | transloco }}</p>
+
+      @if (currentQuestion(); as q) {
+        <h2>{{ q.text }}</h2>
+        <div class="options">
+          @for (option of q.options; track $index) {
+            <div class="option" [class.correct]="isCorrectOption($index)">
+              {{ option }}
+            </div>
+          }
+        </div>
+      }
+
+      <p class="explanation">{{ rv.explanation }}</p>
+
+      <h3>{{ 'match.scoreboard' | transloco }}</h3>
+      <ol class="scoreboard">
+        @for (entry of scoreboard(); track entry.userId) {
+          <li [class.me]="entry.userId === myUserId" [class.disconnected]="!entry.isConnected">
+            <span class="name">{{ entry.displayName }}</span>
+            <span class="score">{{ entry.score }}</span>
+          </li>
+        }
+      </ol>
+    </div>
+  }
+</div>

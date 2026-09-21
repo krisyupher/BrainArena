@@ -1,0 +1,51 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+
+  .app-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .app-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .lang-switch {
+    display: flex;
+    gap: 4px;
+
+    button {
+      background: transparent;
+      color: var(--color-muted);
+      border: 1px solid var(--color-border);
+      padding: 4px 8px;
+      font-size: 0.8rem;
+
+      &.active {
+        background: var(--color-primary);
+        color: var(--color-primary-contrast);
+        border-color: var(--color-primary);
+      }
+    }
+  }
+
+  .display-name {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+  }
+
+  a {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+}

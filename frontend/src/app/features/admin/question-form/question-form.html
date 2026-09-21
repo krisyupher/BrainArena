@@ -1,0 +1,66 @@
+<form class="question-form" [formGroup]="form" (ngSubmit)="submit()">
+  <h2>{{ (question() ? 'admin.editQuestion' : 'admin.addQuestion') | transloco }}</h2>
+
+  <div class="row">
+    <label>
+      {{ 'createRoom.topic' | transloco }}
+      <select formControlName="topic">
+        @for (topic of topics; track topic) {
+          <option [value]="topic">{{ 'lobby.topic.' + topic | transloco }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      {{ 'admin.difficulty' | transloco }}
+      <input type="number" formControlName="difficulty" min="1" max="3" />
+    </label>
+
+    <label>
+      {{ 'admin.language' | transloco }}
+      <select formControlName="language">
+        <option value="es">{{ 'admin.languageEs' | transloco }}</option>
+        <option value="en">{{ 'admin.languageEn' | transloco }}</option>
+      </select>
+    </label>
+  </div>
+
+  <label>
+    {{ 'admin.questionText' | transloco }}
+    <textarea formControlName="text" rows="2"></textarea>
+  </label>
+
+  <p class="options-hint">{{ 'admin.markCorrect' | transloco }}</p>
+  <div class="option-row">
+    <input type="radio" formControlName="correctOptionIndex" [value]="0" />
+    <input type="text" formControlName="option0" [placeholder]="'admin.optionN' | transloco: { n: 1 }" />
+  </div>
+  <div class="option-row">
+    <input type="radio" formControlName="correctOptionIndex" [value]="1" />
+    <input type="text" formControlName="option1" [placeholder]="'admin.optionN' | transloco: { n: 2 }" />
+  </div>
+  <div class="option-row">
+    <input type="radio" formControlName="correctOptionIndex" [value]="2" />
+    <input type="text" formControlName="option2" [placeholder]="'admin.optionN' | transloco: { n: 3 }" />
+  </div>
+  <div class="option-row">
+    <input type="radio" formControlName="correctOptionIndex" [value]="3" />
+    <input type="text" formControlName="option3" [placeholder]="'admin.optionN' | transloco: { n: 4 }" />
+  </div>
+
+  <label>
+    {{ 'admin.explanation' | transloco }}
+    <textarea formControlName="explanation" rows="2"></textarea>
+  </label>
+
+  @if (errorMessage()) {
+    <p class="error">{{ errorMessage() }}</p>
+  }
+
+  <div class="form-actions">
+    <button type="button" class="secondary" (click)="cancel()">{{ 'createRoom.cancel' | transloco }}</button>
+    <button type="submit" [disabled]="form.invalid || submitting()">
+      {{ (question() ? 'admin.save' : 'admin.addQuestion') | transloco }}
+    </button>
+  </div>
+</form>

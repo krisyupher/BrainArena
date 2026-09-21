@@ -1,0 +1,87 @@
+.chat-panel {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-top: var(--spacing);
+
+  h3 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+  }
+}
+
+.messages {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  li.me .bubble {
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-bg));
+  }
+
+  li.empty {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    justify-content: center;
+    padding: 8px 0;
+  }
+}
+
+.bubble {
+  flex: 1;
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  min-width: 0;
+
+  .sender {
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  .text {
+    overflow-wrap: anywhere;
+  }
+}
+
+.report-btn {
+  width: auto;
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  font-size: 0.7rem;
+  padding: 3px 8px;
+}
+
+.reported-tag {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.chat-input {
+  display: flex;
+  gap: 8px;
+
+  input {
+    flex: 1;
+  }
+
+  button {
+    width: auto;
+  }
+}
