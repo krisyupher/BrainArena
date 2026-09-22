@@ -21,12 +21,16 @@
     }
   </ul>
 
-  <form class="chat-input" [formGroup]="form" (ngSubmit)="send()">
-    <input type="text" formControlName="text" [placeholder]="'chat.placeholder' | transloco" maxlength="200" />
-    <button type="submit" [disabled]="form.invalid">{{ 'chat.send' | transloco }}</button>
-  </form>
+  @if (canSend()) {
+    <form class="chat-input" [formGroup]="form" (ngSubmit)="send()">
+      <input type="text" formControlName="text" [placeholder]="'chat.placeholder' | transloco" maxlength="200" />
+      <button type="submit" [disabled]="form.invalid">{{ 'chat.send' | transloco }}</button>
+    </form>
 
-  @if (errorMessage()) {
-    <p class="error">{{ errorMessage() }}</p>
+    @if (errorMessage()) {
+      <p class="error">{{ errorMessage() }}</p>
+    }
+  } @else {
+    <p class="signup-cta">{{ 'chat.signUpToChat' | transloco }}</p>
   }
 </div>

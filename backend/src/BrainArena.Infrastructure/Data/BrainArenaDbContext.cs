@@ -14,6 +14,10 @@ public class BrainArenaDbContext(DbContextOptions<BrainArenaDbContext> options) 
     public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
     public DbSet<MatchAnswer> MatchAnswers => Set<MatchAnswer>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<Tournament> Tournaments => Set<Tournament>();
+    public DbSet<TournamentPlayer> TournamentPlayers => Set<TournamentPlayer>();
+    public DbSet<TournamentRound> TournamentRounds => Set<TournamentRound>();
+    public DbSet<TournamentRoundRoom> TournamentRoundRooms => Set<TournamentRoundRoom>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

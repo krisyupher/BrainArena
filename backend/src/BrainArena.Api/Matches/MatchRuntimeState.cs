@@ -43,7 +43,7 @@ internal class MatchQuestionRuntime
     public ConcurrentDictionary<Guid, PlayerAnswerRuntime> Answers { get; } = new();
 }
 
-internal record PlayerAnswerRuntime(int? SelectedOptionIndex, int PointsAwarded, bool IsCorrect);
+internal record PlayerAnswerRuntime(SubmittedAnswer Answer, int PointsAwarded, bool IsCorrect);
 
 internal class PlayerRuntime
 {

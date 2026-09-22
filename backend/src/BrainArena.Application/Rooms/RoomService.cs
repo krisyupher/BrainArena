@@ -1,5 +1,6 @@
 using BrainArena.Application.Abstractions;
 using BrainArena.Application.Common;
+using BrainArena.Application.Matches;
 using BrainArena.Domain.Entities;
 using BrainArena.Domain.Enums;
 
@@ -9,7 +10,8 @@ public class RoomService(
     IRoomRepository rooms,
     IUserRepository users,
     IRoomNotifier notifier,
-    IMatchOrchestrator matchOrchestrator) : IRoomService
+    IMatchOrchestrator matchOrchestrator,
+    IGameModeRegistry gameModeRegistry) : IRoomService
 {
     public async Task<IReadOnlyList<RoomSummaryDto>> GetOpenRoomsAsync(CancellationToken ct = default)
     {
@@ -23,7 +25,7 @@ public class RoomService(
 
     public async Task<RoomDetailDto> CreateRoomAsync(Guid hostUserId, CreateRoomRequest request, CancellationToken ct = default)
     {
-        RoomValidation.Validate(request);
+        RoomValidation.Validate(request, gameModeRegistry.ModeKeys);
 
         var host = await users.GetByIdAsync(hostUserId, ct)
             ?? throw new AppException("Host user not found.", 404);
@@ -38,6 +40,7 @@ public class RoomService(
             QuestionCount = request.QuestionCount,
             SecondsPerQuestion = request.SecondsPerQuestion,
             IsPrivate = request.IsPrivate,
+            GameMode = request.GameMode,
             Status = RoomStatus.Waiting,
             HostUserId = hostUserId,
             CreatedAt = DateTimeOffset.UtcNow
@@ -144,6 +147,22 @@ public class RoomService(
     {
         var room = await rooms.GetByIdAsync(roomId, ct)
             ?? throw new AppException("Room not found.", 404);
+
+        return MapDetail(room);
+    }
+
+    public async Task<RoomDetailDto> GetVisibleRoomDetailAsync(Guid roomId, Guid? requestingUserId, CancellationToken ct = default)
+    {
+        var room = await rooms.GetByIdAsync(roomId, ct)
+            ?? throw new AppException("Room not found.", 404);
+
+        var isMember = requestingUserId is not null && room.Players.Any(p => p.UserId == requestingUserId.Value);
+        if (room.IsPrivate && !isMember)
+        {
+            // Same message/status as "doesn't exist" — a private room shouldn't confirm its own
+            // existence to a non-member.
+            throw new AppException("Room not found.", 404);
+        }
 
         return MapDetail(room);
     }

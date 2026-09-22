@@ -1,0 +1,140 @@
+.tournament-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--spacing);
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tournament-meta {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.tournament-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--spacing);
+
+  &.status-Waiting {
+    color: var(--color-success);
+  }
+
+  &.status-InProgress {
+    color: var(--color-primary);
+  }
+}
+
+.champion-banner {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  font-size: 1.1rem;
+  margin-bottom: var(--spacing);
+}
+
+.active-room-cta {
+  display: block;
+  text-align: center;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 12px;
+  font-weight: 600;
+  margin-bottom: var(--spacing);
+}
+
+.players-section,
+.rounds-section,
+.all-players-section {
+  margin-bottom: var(--spacing);
+}
+
+.player-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+  }
+
+  .eliminated {
+    color: var(--color-muted);
+    text-decoration: line-through;
+  }
+
+  .champion {
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .elim-round {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    margin-left: 6px;
+  }
+}
+
+.round-block {
+  margin-bottom: 16px;
+  opacity: 0.6;
+
+  &.current-round {
+    opacity: 1;
+  }
+}
+
+.round-rooms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.round-room {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+
+  &.status-Finished {
+    border-left: 3px solid var(--color-success);
+  }
+}
+
+.room-status-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.room-players {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+
+  .eliminated {
+    color: var(--color-muted);
+    text-decoration: line-through;
+  }
+}

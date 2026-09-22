@@ -16,15 +16,17 @@ public class RoomsController(
     IChatService chatService) : ControllerBase
 {
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<RoomSummaryDto>>> GetOpenRooms(CancellationToken ct)
     {
         return Ok(await roomService.GetOpenRoomsAsync(ct));
     }
 
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     public async Task<ActionResult<RoomDetailDto>> GetById(Guid id, CancellationToken ct)
     {
-        return Ok(await roomService.GetRoomDetailAsync(id, ct));
+        return Ok(await roomService.GetVisibleRoomDetailAsync(id, User.GetUserIdOrNull(), ct));
     }
 
     [HttpGet("by-code/{code}")]
@@ -53,8 +55,11 @@ public class RoomsController(
     }
 
     [HttpGet("{id:guid}/chat")]
+    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<ChatMessageDto>>> GetChatHistory(Guid id, CancellationToken ct)
     {
+        // Guests can read chat but not send — reuse the same private-room visibility rule as GetById.
+        await roomService.GetVisibleRoomDetailAsync(id, User.GetUserIdOrNull(), ct);
         return Ok(await chatService.GetHistoryAsync(id, ct));
     }
 }

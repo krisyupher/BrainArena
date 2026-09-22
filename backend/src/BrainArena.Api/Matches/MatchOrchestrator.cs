@@ -3,6 +3,7 @@ using BrainArena.Api.Hubs;
 using BrainArena.Application.Abstractions;
 using BrainArena.Application.Common;
 using BrainArena.Application.Matches;
+using BrainArena.Application.Tournaments;
 using BrainArena.Domain.Entities;
 using BrainArena.Domain.Enums;
 using BrainArena.Infrastructure.Data;
@@ -68,7 +69,7 @@ public class MatchOrchestrator(
         await StartMatchAsync(room, scope, ct);
     }
 
-    public async Task SubmitAnswerAsync(Guid roomId, Guid userId, Guid matchQuestionId, int selectedOptionIndex)
+    public async Task SubmitAnswerAsync(Guid roomId, Guid userId, Guid matchQuestionId, SubmittedAnswer answer)
     {
         if (!_matches.TryGetValue(roomId, out var state))
         {
@@ -91,12 +92,6 @@ public class MatchOrchestrator(
             throw new AppException("You're not part of this match.", 403);
         }
 
-        var question = current.MatchQuestion.Question!;
-        if (selectedOptionIndex < 0 || selectedOptionIndex >= question.Options.Length)
-        {
-            throw new AppException("Invalid option.", 400);
-        }
-
         var timeRemaining = state.PhaseEndsAtUtc - DateTimeOffset.UtcNow;
         if (timeRemaining < TimeSpan.Zero)
         {
@@ -104,9 +99,11 @@ public class MatchOrchestrator(
         }
 
         var timeLimit = TimeSpan.FromSeconds(state.SecondsPerQuestion);
-        var result = state.GameMode.EvaluateAnswer(current.MatchQuestion, selectedOptionIndex, timeRemaining, timeLimit);
+        // EvaluateAnswer validates the shape (e.g. an option index in range) itself — that check
+        // belongs to whichever mode defines the shape, not to the orchestrator.
+        var result = state.GameMode.EvaluateAnswer(current.MatchQuestion, answer, timeRemaining, timeLimit);
 
-        if (!current.Answers.TryAdd(userId, new PlayerAnswerRuntime(selectedOptionIndex, result.Points, result.IsCorrect)))
+        if (!current.Answers.TryAdd(userId, new PlayerAnswerRuntime(answer, result.Points, result.IsCorrect)))
         {
             throw new AppException("You already answered this question.", 409);
         }
@@ -119,7 +116,8 @@ public class MatchOrchestrator(
         {
             MatchQuestionId = matchQuestionId,
             UserId = userId,
-            SelectedOptionIndex = selectedOptionIndex,
+            SelectedOptionIndex = answer.OptionIndex,
+            NumericAnswer = answer.NumericValue,
             PointsAwarded = result.Points,
             AnsweredAt = DateTimeOffset.UtcNow
         });
@@ -159,6 +157,34 @@ public class MatchOrchestrator(
         };
     }
 
+    public MatchSpectatorSyncPayload? Snapshot(Guid roomId)
+    {
+        if (!_matches.TryGetValue(roomId, out var state))
+        {
+            return null;
+        }
+
+        var scoreboard = state.BuildScoreboard();
+
+        return state.Phase switch
+        {
+            MatchPhase.Question => new MatchSpectatorSyncPayload(
+                state.MatchId,
+                "Question",
+                state.GameMode.ToClientPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.Questions.Count, state.PhaseEndsAtUtc),
+                null,
+                scoreboard),
+            MatchPhase.Reveal => new MatchSpectatorSyncPayload(
+                state.MatchId,
+                "Reveal",
+                null,
+                state.GameMode.ToRevealPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.PhaseEndsAtUtc, scoreboard),
+                scoreboard),
+            MatchPhase.Countdown => new MatchSpectatorSyncPayload(state.MatchId, "Countdown", null, null, scoreboard),
+            _ => null
+        };
+    }
+
     public void MarkDisconnected(Guid roomId, Guid userId)
     {
         if (_matches.TryGetValue(roomId, out var state) && state.Players.TryGetValue(userId, out var player))
@@ -179,8 +205,9 @@ public class MatchOrchestrator(
         {
             var db = scope.ServiceProvider.GetRequiredService<BrainArenaDbContext>();
             var questionRepo = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
+            var gameMode = gameModeRegistry.Resolve(room.GameMode);
 
-            var questions = await questionRepo.GetRandomByTopicAsync(room.Topic, room.QuestionCount, ct);
+            var questions = await gameMode.PrepareQuestionsAsync(room, questionRepo, ct);
             if (questions.Count < room.QuestionCount)
             {
                 await hub.Clients.Group(RoomHub.RoomGroupName(room.Id)).SendAsync(
@@ -230,7 +257,7 @@ public class MatchOrchestrator(
             {
                 MatchId = matchId,
                 RoomId = room.Id,
-                GameMode = gameModeRegistry.Resolve(room.GameMode),
+                GameMode = gameMode,
                 SecondsPerQuestion = room.SecondsPerQuestion,
                 Questions = matchQuestions.Select(mq => new MatchQuestionRuntime { MatchQuestion = mq }).ToList(),
                 Players = runtimePlayers
@@ -304,12 +331,7 @@ public class MatchOrchestrator(
             .ToList();
 
         var review = state.Questions
-            .Select((q, index) => new QuestionReviewEntry(
-                index,
-                q.MatchQuestion.Question!.Text,
-                q.MatchQuestion.Question!.Options,
-                q.MatchQuestion.Question!.CorrectOptionIndex,
-                q.MatchQuestion.Question!.Explanation))
+            .Select((q, index) => state.GameMode.ToReviewEntry(q.MatchQuestion, index))
             .ToList();
 
         using (var scope = scopeFactory.CreateScope())
@@ -331,6 +353,13 @@ public class MatchOrchestrator(
             room.Status = RoomStatus.Finished;
 
             await db.SaveChangesAsync();
+
+            // No-ops for an ordinary room; advances the bracket if this room belongs to an
+            // active tournament round. Resolved from this same scope (not constructor-injected —
+            // TournamentService is Scoped, MatchOrchestrator is a Singleton and can't hold a
+            // direct reference to a scoped service without a captive-dependency violation).
+            var tournamentService = scope.ServiceProvider.GetRequiredService<ITournamentService>();
+            await tournamentService.HandleRoomMatchFinishedAsync(state.RoomId);
         }
 
         var payload = new MatchEndedPayload(state.MatchId, ranked, review);

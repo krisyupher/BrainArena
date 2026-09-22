@@ -1,39 +1,42 @@
 @if (room(); as r) {
-  <div class="room-page">
-    <h1>{{ r.name }}</h1>
-    <p class="room-topic">{{ 'lobby.topic.' + r.topic | transloco }}</p>
+  <div class="page-with-sidebar">
+    <div class="room-page">
+      <h1>{{ r.name }}</h1>
+      <p class="room-topic">{{ 'lobby.topic.' + r.topic | transloco }}</p>
 
-    @if (r.isPrivate && r.shareCode && isHost) {
-      <p class="share-code-hint">{{ 'room.shareCode' | transloco }}: <strong>{{ r.shareCode }}</strong></p>
-    }
-
-    <p class="player-count">{{ 'lobby.players' | transloco }}: {{ r.players.length }}/{{ r.maxPlayers }}</p>
-
-    <ul class="player-list">
-      @for (player of r.players; track player.userId) {
-        <li>
-          {{ player.displayName }}
-          @if (player.userId === r.hostUserId) {
-            <span class="host-badge">{{ 'room.host' | transloco }}</span>
-          }
-        </li>
+      @if (r.isPrivate && r.shareCode && isHost) {
+        <p class="share-code-hint">{{ 'room.shareCode' | transloco }}: <strong>{{ r.shareCode }}</strong></p>
       }
-    </ul>
 
-    @if (errorMessage()) {
-      <p class="error">{{ errorMessage() }}</p>
-    }
+      <p class="player-count">{{ 'lobby.players' | transloco }}: {{ r.players.length }}/{{ r.maxPlayers }}</p>
 
-    @if (isHost) {
-      <button type="button" [disabled]="!canStartNow || startingMatch()" (click)="startNow()">
-        {{ 'room.startNow' | transloco }}
-      </button>
-    } @else {
-      <p class="waiting-text">{{ 'room.waitingForHost' | transloco }}</p>
-    }
+      @if (errorMessage()) {
+        <p class="error">{{ errorMessage() }}</p>
+      }
 
-    <button type="button" class="secondary" (click)="leave()">{{ 'room.leave' | transloco }}</button>
+      @if (isHost) {
+        <button type="button" [disabled]="!canStartNow || startingMatch()" (click)="startNow()">
+          {{ 'room.startNow' | transloco }}
+        </button>
+      } @else if (isParticipant) {
+        <p class="waiting-text">{{ 'room.waitingForHost' | transloco }}</p>
+      } @else {
+        <p class="spectator-cta">
+          {{ 'room.spectating' | transloco }}
+          <a routerLink="/login">{{ 'room.signUpToPlay' | transloco }}</a>
+        </p>
+      }
 
-    <app-chat [roomId]="roomId" />
+      @if (isParticipant) {
+        <button type="button" class="secondary" (click)="leave()">{{ 'room.leave' | transloco }}</button>
+      } @else {
+        <button type="button" class="secondary" (click)="leave()">{{ 'room.back' | transloco }}</button>
+      }
+    </div>
+
+    <div class="page-sidebar">
+      <app-competitors-panel [competitors]="competitors" [myUserId]="myUserId" [roomId]="roomId" [canReact]="isSignedIn" />
+      <app-chat [roomId]="roomId" [canSend]="isSignedIn" />
+    </div>
   </div>
 }

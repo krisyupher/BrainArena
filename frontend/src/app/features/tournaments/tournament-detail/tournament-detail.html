@@ -1,0 +1,96 @@
+@if (tournament(); as t) {
+  <div class="tournament-page">
+    <a class="back-link" routerLink="/tournaments">{{ 'tournaments.back' | transloco }}</a>
+
+    <h1>{{ t.name }}</h1>
+    <p class="tournament-meta">
+      {{ 'createRoom.gameModeOption.' + t.gameMode | transloco }}
+      · {{ 'tournaments.roundFormat' | transloco: { roomSize: t.roomSize, advances: t.advancesPerRoom } }}
+    </p>
+    <p class="tournament-status" [class]="'status-' + t.status">
+      {{ 'lobby.status.' + t.status | transloco }}
+    </p>
+
+    @if (errorMessage()) {
+      <p class="error">{{ errorMessage() }}</p>
+    }
+
+    @if (t.status === 'Finished' && t.championUserId) {
+      <div class="champion-banner">
+        🏆 {{ 'tournaments.champion' | transloco }}:
+        <strong>{{ playerName(t, t.championUserId) }}</strong>
+      </div>
+    }
+
+    @if (myActiveRoom && myActiveRoom.roomStatus !== 'Finished') {
+      <a class="active-room-cta" [routerLink]="['/rooms', myActiveRoom.roomId]">
+        {{ 'tournaments.goToYourMatch' | transloco }}
+      </a>
+    }
+
+    @if (t.status === 'Waiting') {
+      <section class="players-section">
+        <h2>{{ 'tournaments.players' | transloco }} ({{ t.players.length }}/{{ t.tournamentSize }})</h2>
+        <ul class="player-list">
+          @for (player of t.players; track player.userId) {
+            <li>{{ player.displayName }}</li>
+          }
+        </ul>
+
+        @if (!isMember && auth.isAuthenticated()) {
+          <button type="button" [disabled]="busy()" (click)="join()">{{ 'tournaments.join' | transloco }}</button>
+        } @else if (!auth.isAuthenticated()) {
+          <a routerLink="/login">{{ 'room.signUpToPlay' | transloco }}</a>
+        }
+
+        @if (canStart) {
+          <button type="button" [disabled]="busy()" (click)="start()">{{ 'room.startNow' | transloco }}</button>
+        }
+
+        @if (isMember) {
+          <button type="button" class="secondary" [disabled]="busy()" (click)="leave()">
+            {{ 'tournaments.leave' | transloco }}
+          </button>
+        }
+      </section>
+    } @else {
+      <section class="rounds-section">
+        @for (round of t.rounds; track round.roundNumber) {
+          <div class="round-block" [class.current-round]="round.roundNumber === t.currentRoundNumber">
+            <h2>
+              {{ round.isFinal ? ('tournaments.finalRound' | transloco) : ('tournaments.round' | transloco: { number: round.roundNumber }) }}
+            </h2>
+            <ul class="round-rooms">
+              @for (room of round.rooms; track room.roomId) {
+                <li class="round-room" [class.status-Finished]="room.roomStatus === 'Finished'">
+                  <span class="room-status-label">{{ 'lobby.status.' + room.roomStatus | transloco }}</span>
+                  <ul class="room-players">
+                    @for (player of room.players; track player.userId) {
+                      <li [class.eliminated]="playerStatus(t, player.userId) === 'Eliminated'">
+                        {{ player.displayName }}
+                      </li>
+                    }
+                  </ul>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
+
+      <section class="all-players-section">
+        <h2>{{ 'tournaments.players' | transloco }}</h2>
+        <ul class="player-list">
+          @for (player of t.players; track player.userId) {
+            <li [class.eliminated]="player.status === 'Eliminated'" [class.champion]="player.status === 'Champion'">
+              {{ player.displayName }}
+              @if (player.status === 'Eliminated' && player.eliminatedAtRound) {
+                <span class="elim-round">{{ 'tournaments.eliminatedAtRound' | transloco: { round: player.eliminatedAtRound } }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+}

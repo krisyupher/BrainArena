@@ -2,7 +2,8 @@
   "app": {
     "title": "BrainArena",
     "logout": "Cerrar sesión",
-    "admin": "Admin"
+    "admin": "Admin",
+    "tournaments": "Torneos"
   },
   "auth": {
     "login": {
@@ -31,6 +32,8 @@
     "createRoom": "Crear sala",
     "noRooms": "No hay salas activas todavía. ¡Crea la primera!",
     "join": "Unirse",
+    "watch": "Ver",
+    "loginToPlay": "Inicia sesión para crear o unirte a una sala",
     "players": "Jugadores",
     "status": {
       "Waiting": "Esperando",
@@ -47,6 +50,11 @@
   "createRoom": {
     "title": "Crear sala",
     "name": "Nombre de la sala",
+    "gameMode": "Modo de juego",
+    "gameModeOption": {
+      "multiple-choice": "Opción múltiple",
+      "calculation": "Cálculo"
+    },
     "topic": "Tema",
     "maxPlayers": "Jugadores máximos",
     "minPlayersToStart": "Mínimo para iniciar",
@@ -62,17 +70,26 @@
     "shareCode": "Código para compartir",
     "startNow": "Iniciar ahora",
     "waitingForHost": "Esperando a que el anfitrión inicie la partida...",
-    "leave": "Salir de la sala"
+    "leave": "Salir de la sala",
+    "back": "Volver a las salas",
+    "notFound": "No se encontró esta sala.",
+    "spectating": "Estás viendo como espectador.",
+    "signUpToPlay": "Regístrate o inicia sesión para jugar"
   },
   "match": {
     "getReady": "¡Prepárate! La partida comienza en...",
     "questionProgress": "Pregunta {{index}} de {{total}}",
     "reviewing": "Revisión de la pregunta",
     "scoreboard": "Marcador",
+    "competitors": "Competidores",
+    "react": "Enviar una reacción",
     "loadingResults": "Cargando resultados...",
     "finalResults": "Resultados finales",
     "review": "Revisión de preguntas",
-    "backToLobby": "Volver a las salas"
+    "backToLobby": "Volver a las salas",
+    "numericAnswerPlaceholder": "Tu respuesta",
+    "submitAnswer": "Enviar",
+    "correctAnswerWas": "La respuesta correcta era"
   },
   "admin": {
     "title": "Banco de preguntas",
@@ -102,6 +119,26 @@
     "send": "Enviar",
     "report": "Reportar",
     "reported": "Reportado",
-    "empty": "Aún no hay mensajes."
+    "empty": "Aún no hay mensajes.",
+    "signUpToChat": "Regístrate para enviar mensajes"
+  },
+  "tournaments": {
+    "title": "Torneos",
+    "createTournament": "Crear torneo",
+    "noTournaments": "No hay torneos abiertos todavía. ¡Crea el primero!",
+    "view": "Ver",
+    "back": "Volver a los torneos",
+    "tournamentSize": "Tamaño del torneo",
+    "roomSize": "Jugadores por sala",
+    "advancesPerRoom": "Avanzan por sala",
+    "roundFormat": "avanzan los mejores {{advances}} de {{roomSize}} en cada ronda",
+    "players": "Jugadores",
+    "join": "Unirse al torneo",
+    "leave": "Salir del torneo",
+    "champion": "Campeón",
+    "goToYourMatch": "Ir a tu partida",
+    "round": "Ronda {{number}}",
+    "finalRound": "Final",
+    "eliminatedAtRound": "(eliminado en la ronda {{round}})"
   }
 }

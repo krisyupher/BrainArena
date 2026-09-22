@@ -31,7 +31,12 @@ describe('MatchPlay', () => {
             questionRevealed: new Subject(),
             matchEnded: new Subject(),
             matchResync: new Subject(),
-            joinRoomGroup: () => Promise.resolve()
+            matchSpectatorSync: new Subject(),
+            chatMessageReceived: new Subject(),
+            chatMessageReported: new Subject(),
+            reactionSent: new Subject(),
+            joinRoomGroup: () => Promise.resolve(),
+            joinAsSpectator: () => Promise.resolve()
           }
         }
       ]

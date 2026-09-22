@@ -2,7 +2,7 @@ import { Component, inject, output, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { RoomService } from '../../../core/services/room.service';
-import { ROOM_TOPICS, RoomTopic } from '../../../core/models/room.model';
+import { GAME_MODES, GameMode, ROOM_TOPICS, RoomTopic } from '../../../core/models/room.model';
 
 @Component({
   imports: [ReactiveFormsModule, TranslocoPipe],
@@ -18,6 +18,7 @@ export class CreateRoomForm {
   readonly cancelled = output<void>();
 
   readonly topics = ROOM_TOPICS;
+  readonly gameModes = GAME_MODES;
   readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly createdShareCode = signal<string | null>(null);
@@ -30,8 +31,14 @@ export class CreateRoomForm {
     minPlayersToStart: [2, [Validators.required, Validators.min(2)]],
     questionCount: [10, [Validators.required, Validators.min(5), Validators.max(20)]],
     secondsPerQuestion: [20, [Validators.required, Validators.min(10), Validators.max(60)]],
-    isPrivate: [false]
+    isPrivate: [false],
+    gameMode: ['multiple-choice' as GameMode, [Validators.required]]
   });
+
+  /** Topic only drives the multiple-choice question bank — calculation mode generates its own problems. */
+  get isTopicRelevant(): boolean {
+    return this.form.controls.gameMode.value === 'multiple-choice';
+  }
 
   submit(): void {
     if (this.form.invalid || this.submitting()) {

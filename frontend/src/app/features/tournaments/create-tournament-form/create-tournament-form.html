@@ -1,0 +1,73 @@
+<div class="create-room-card">
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <h2>{{ 'tournaments.createTournament' | transloco }}</h2>
+
+    <label>
+      {{ 'createRoom.name' | transloco }}
+      <input type="text" formControlName="name" />
+    </label>
+
+    <label>
+      {{ 'createRoom.gameMode' | transloco }}
+      <select formControlName="gameMode">
+        @for (mode of gameModes; track mode) {
+          <option [value]="mode">{{ 'createRoom.gameModeOption.' + mode | transloco }}</option>
+        }
+      </select>
+    </label>
+
+    @if (isTopicRelevant) {
+      <label>
+        {{ 'createRoom.topic' | transloco }}
+        <select formControlName="topic">
+          @for (topic of topics; track topic) {
+            <option [value]="topic">{{ 'lobby.topic.' + topic | transloco }}</option>
+          }
+        </select>
+      </label>
+    }
+
+    <label>
+      {{ 'tournaments.tournamentSize' | transloco }}
+      <input type="number" formControlName="tournamentSize" min="4" max="64" />
+    </label>
+
+    <label>
+      {{ 'tournaments.roomSize' | transloco }}
+      <input type="number" formControlName="roomSize" min="2" max="10" />
+    </label>
+
+    <label>
+      {{ 'tournaments.advancesPerRoom' | transloco }}
+      <input type="number" formControlName="advancesPerRoom" min="1" />
+    </label>
+
+    <label>
+      {{ 'createRoom.minPlayersToStart' | transloco }}
+      <input type="number" formControlName="minPlayersToStart" min="2" />
+    </label>
+
+    <label>
+      {{ 'createRoom.questionCount' | transloco }}
+      <input type="number" formControlName="questionCount" min="5" max="20" />
+    </label>
+
+    <label>
+      {{ 'createRoom.secondsPerQuestion' | transloco }}
+      <input type="number" formControlName="secondsPerQuestion" min="10" max="60" />
+    </label>
+
+    @if (errorMessage()) {
+      <p class="error">{{ errorMessage() }}</p>
+    }
+
+    <div class="form-actions">
+      <button type="button" class="secondary" (click)="cancel()">
+        {{ 'createRoom.cancel' | transloco }}
+      </button>
+      <button type="submit" [disabled]="form.invalid || submitting()">
+        {{ 'createRoom.submit' | transloco }}
+      </button>
+    </div>
+  </form>
+</div>

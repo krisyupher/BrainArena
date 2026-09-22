@@ -83,8 +83,8 @@ public class FullMatchFlowTests(IntegrationTestFactory factory) : IClassFixture<
             if (latestQuestion is { } q && answeredIndexes.Add(q.Index))
             {
                 // Host and second player answer (one "correctly enough", one not); third never answers.
-                await hostConn.InvokeAsync("SubmitAnswer", roomId, q.MatchQuestionId, 0);
-                await secondConn.InvokeAsync("SubmitAnswer", roomId, q.MatchQuestionId, 1);
+                await hostConn.InvokeAsync("SubmitAnswer", roomId, q.MatchQuestionId, 0, null);
+                await secondConn.InvokeAsync("SubmitAnswer", roomId, q.MatchQuestionId, 1, null);
             }
 
             await Task.Delay(200);

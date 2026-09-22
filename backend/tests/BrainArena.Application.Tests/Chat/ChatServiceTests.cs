@@ -18,7 +18,9 @@ public class ChatServiceTests
         return (service, chat, rooms, users);
     }
 
-    private static Room BuildRoom(RoomStatus status, params Guid[] playerIds)
+    private static Room BuildRoom(RoomStatus status, params Guid[] playerIds) => BuildRoom(status, isPrivate: false, playerIds);
+
+    private static Room BuildRoom(RoomStatus status, bool isPrivate, params Guid[] playerIds)
     {
         var room = new Room
         {
@@ -30,6 +32,7 @@ public class ChatServiceTests
             QuestionCount = 10,
             SecondsPerQuestion = 20,
             Status = status,
+            IsPrivate = isPrivate,
             HostUserId = playerIds[0],
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -70,32 +73,48 @@ public class ChatServiceTests
     }
 
     [Fact]
-    public async Task SendMessageAsync_ThrowsWhileAMatchIsInProgress()
+    public async Task SendMessageAsync_SucceedsWhileAMatchIsInProgress()
     {
+        // Product decision: chat is no longer disabled during questions — fairness only
+        // restricts *players'* answers, never chat, for anyone signed in.
         var (service, _, rooms, users) = BuildService();
         var player = users.Seed();
         var room = BuildRoom(RoomStatus.InProgress, player.Id);
         await rooms.AddAsync(room);
 
-        var exception = await Assert.ThrowsAsync<AppException>(
-            () => service.SendMessageAsync(room.Id, player.Id, "psst, the answer is B"));
+        var exception = await Record.ExceptionAsync(() => service.SendMessageAsync(room.Id, player.Id, "go team!"));
 
-        Assert.Equal(409, exception.StatusCode);
+        Assert.Null(exception);
     }
 
     [Fact]
-    public async Task SendMessageAsync_ThrowsForANonMember()
+    public async Task SendMessageAsync_SucceedsForANonMemberOfAPublicRoom()
+    {
+        // Spectators (signed in, but never joined as a player) can chat in any public room.
+        var (service, _, rooms, users) = BuildService();
+        var player = users.Seed();
+        var spectator = users.Seed();
+        var room = BuildRoom(RoomStatus.Waiting, player.Id);
+        await rooms.AddAsync(room);
+
+        var exception = await Record.ExceptionAsync(() => service.SendMessageAsync(room.Id, spectator.Id, "good luck!"));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_ThrowsForANonMemberOfAPrivateRoom()
     {
         var (service, _, rooms, users) = BuildService();
         var player = users.Seed();
         var outsider = users.Seed();
-        var room = BuildRoom(RoomStatus.Waiting, player.Id);
+        var room = BuildRoom(RoomStatus.Waiting, isPrivate: true, player.Id);
         await rooms.AddAsync(room);
 
         var exception = await Assert.ThrowsAsync<AppException>(
             () => service.SendMessageAsync(room.Id, outsider.Id, "hi"));
 
-        Assert.Equal(403, exception.StatusCode);
+        Assert.Equal(404, exception.StatusCode);
     }
 
     [Fact]

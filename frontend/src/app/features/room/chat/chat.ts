@@ -20,6 +20,8 @@ import { ChatMessageDto } from '../../../core/models/chat.model';
 })
 export class Chat implements OnInit, OnDestroy {
   readonly roomId = input.required<string>();
+  /** False for a spectator: the feed still renders, but the send form is hidden. */
+  readonly canSend = input(true);
 
   private readonly chatService = inject(ChatService);
   private readonly roomHub = inject(RoomHubService);

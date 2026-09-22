@@ -1,0 +1,36 @@
+@if (phase() === 'question') {
+  @if (canAnswer()) {
+    <div class="options">
+      @for (option of question().options; track $index) {
+        <button
+          type="button"
+          class="option"
+          [class.selected]="selectedOption() === $index"
+          [disabled]="answerLocked()"
+          (click)="select($index)"
+        >
+          {{ option }}
+        </button>
+      }
+    </div>
+
+    @if (errorMessage()) {
+      <p class="error">{{ errorMessage() }}</p>
+    }
+  } @else {
+    <div class="options">
+      @for (option of question().options; track $index) {
+        <div class="option">{{ option }}</div>
+      }
+    </div>
+    <p class="spectator-tag">{{ 'room.spectating' | transloco }}</p>
+  }
+} @else if (reveal(); as rv) {
+  <div class="options">
+    @for (option of question().options; track $index) {
+      <div class="option" [class.correct]="isCorrectOption($index)">
+        {{ option }}
+      </div>
+    }
+  </div>
+}

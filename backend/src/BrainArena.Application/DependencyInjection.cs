@@ -4,6 +4,7 @@ using BrainArena.Application.Chat;
 using BrainArena.Application.Matches;
 using BrainArena.Application.Questions;
 using BrainArena.Application.Rooms;
+using BrainArena.Application.Tournaments;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BrainArena.Application;
@@ -16,10 +17,13 @@ public static class DependencyInjection
         services.AddScoped<IRoomService, RoomService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<ITournamentService, TournamentService>();
 
         services.AddSingleton<IGameMode, MultipleChoiceGameMode>();
+        services.AddSingleton<IGameMode, CalculationGameMode>();
         services.AddSingleton<IGameModeRegistry, GameModeRegistry>();
         services.AddSingleton<IChatRateLimiter, ChatRateLimiter>();
+        services.AddSingleton<TournamentAdvancementLock>();
 
         return services;
     }

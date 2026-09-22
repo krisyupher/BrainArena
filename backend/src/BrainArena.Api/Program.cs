@@ -22,6 +22,7 @@ var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"] ?? "http://local
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IRoomNotifier, RoomNotifier>();
+builder.Services.AddScoped<ITournamentNotifier, TournamentNotifier>();
 builder.Services.AddSingleton<RoomConnectionTracker>();
 builder.Services.AddSingleton<IMatchOrchestrator, MatchOrchestrator>();
 builder.Services.Configure<MatchTimingOptions>(builder.Configuration.GetSection(MatchTimingOptions.SectionName));

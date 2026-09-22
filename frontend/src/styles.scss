@@ -111,3 +111,26 @@ a {
   color: var(--color-muted);
   margin-top: var(--spacing);
 }
+
+/* Shared two-column shell: main content + a right rail (chat, competitors, ...), used by the
+   waiting room and match-play. Stacks to a single column on narrow viewports. */
+.page-with-sidebar {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  align-items: start;
+  gap: var(--spacing);
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--spacing);
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.page-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  min-width: 0;
+}

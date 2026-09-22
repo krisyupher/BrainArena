@@ -15,13 +15,24 @@
       </label>
 
       <label>
-        {{ 'createRoom.topic' | transloco }}
-        <select formControlName="topic">
-          @for (topic of topics; track topic) {
-            <option [value]="topic">{{ 'lobby.topic.' + topic | transloco }}</option>
+        {{ 'createRoom.gameMode' | transloco }}
+        <select formControlName="gameMode">
+          @for (mode of gameModes; track mode) {
+            <option [value]="mode">{{ 'createRoom.gameModeOption.' + mode | transloco }}</option>
           }
         </select>
       </label>
+
+      @if (isTopicRelevant) {
+        <label>
+          {{ 'createRoom.topic' | transloco }}
+          <select formControlName="topic">
+            @for (topic of topics; track topic) {
+              <option [value]="topic">{{ 'lobby.topic.' + topic | transloco }}</option>
+            }
+          </select>
+        </label>
+      }
 
       <label>
         {{ 'createRoom.maxPlayers' | transloco }}

@@ -13,4 +13,8 @@ public static class ClaimsPrincipalExtensions
 
         return Guid.Parse(value);
     }
+
+    /// <summary>Null for an anonymous caller, instead of throwing — for endpoints reachable by both.</summary>
+    public static Guid? GetUserIdOrNull(this ClaimsPrincipal principal) =>
+        principal.Identity?.IsAuthenticated == true ? principal.GetUserId() : null;
 }

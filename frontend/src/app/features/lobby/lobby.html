@@ -1,9 +1,13 @@
 <div class="lobby-page">
   <div class="lobby-header">
     <h1>{{ 'lobby.title' | transloco }}</h1>
-    <button type="button" (click)="showCreateForm.set(!showCreateForm())">
-      {{ 'lobby.createRoom' | transloco }}
-    </button>
+    @if (auth.isAuthenticated()) {
+      <button type="button" (click)="showCreateForm.set(!showCreateForm())">
+        {{ 'lobby.createRoom' | transloco }}
+      </button>
+    } @else {
+      <a class="login-cta" routerLink="/login">{{ 'lobby.loginToPlay' | transloco }}</a>
+    }
   </div>
 
   @if (showCreateForm()) {
@@ -34,13 +38,17 @@
           </div>
           <div class="room-meta">
             <span class="room-count">{{ 'lobby.players' | transloco }}: {{ room.playerCount }}/{{ room.maxPlayers }}</span>
-            <button
-              type="button"
-              [disabled]="room.status !== 'Waiting' || room.playerCount >= room.maxPlayers"
-              (click)="join(room)"
-            >
-              {{ 'lobby.join' | transloco }}
-            </button>
+            @if (auth.isAuthenticated()) {
+              <button
+                type="button"
+                [disabled]="room.status !== 'Waiting' || room.playerCount >= room.maxPlayers"
+                (click)="join(room)"
+              >
+                {{ 'lobby.join' | transloco }}
+              </button>
+            } @else {
+              <a class="secondary" [routerLink]="['/rooms', room.id]">{{ 'lobby.watch' | transloco }}</a>
+            }
           </div>
         </li>
       }

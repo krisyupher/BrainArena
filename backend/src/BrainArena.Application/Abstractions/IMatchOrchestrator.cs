@@ -19,10 +19,13 @@ public interface IMatchOrchestrator
     Task StartNowAsync(Guid roomId, Guid requestingUserId, CancellationToken ct = default);
 
     /// <summary>Throws HubException-friendly errors via AppException for invalid submissions.</summary>
-    Task SubmitAnswerAsync(Guid roomId, Guid userId, Guid matchQuestionId, int selectedOptionIndex);
+    Task SubmitAnswerAsync(Guid roomId, Guid userId, Guid matchQuestionId, SubmittedAnswer answer);
 
     /// <summary>Null if there's no active match for this room (caller should treat it as a waiting-room join instead).</summary>
     MatchResyncPayload? Join(Guid roomId, Guid userId);
+
+    /// <summary>Non-personalized equivalent of <see cref="Join"/> for a spectator; null if there's no active match.</summary>
+    MatchSpectatorSyncPayload? Snapshot(Guid roomId);
 
     void MarkDisconnected(Guid roomId, Guid userId);
 }

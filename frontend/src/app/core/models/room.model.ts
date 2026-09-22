@@ -1,7 +1,9 @@
 export type RoomTopic = 'Math' | 'Geography' | 'Chemistry' | 'IcfesGeneral';
 export type RoomStatus = 'Waiting' | 'InProgress' | 'Finished';
+export type GameMode = 'multiple-choice' | 'calculation';
 
 export const ROOM_TOPICS: RoomTopic[] = ['Math', 'Geography', 'Chemistry', 'IcfesGeneral'];
+export const GAME_MODES: GameMode[] = ['multiple-choice', 'calculation'];
 
 export interface RoomSummary {
   id: string;
@@ -41,4 +43,5 @@ export interface CreateRoomRequest {
   questionCount: number;
   secondsPerQuestion: number;
   isPrivate: boolean;
+  gameMode: GameMode;
 }

@@ -1,0 +1,46 @@
+<div class="competitors-panel">
+  <h3>{{ 'match.competitors' | transloco }}</h3>
+  <ol class="competitors-list">
+    @for (c of competitors(); track c.userId) {
+      <li [class.me]="c.userId === myUserId()" [class.disconnected]="c.isConnected === false">
+        <div class="avatar-wrap">
+          <span class="avatar">{{ c.displayName.charAt(0).toUpperCase() }}</span>
+          @for (reaction of activeReactionsFor(c.userId); track reaction.key) {
+            <span class="reaction-burst">{{ reaction.emoji }}</span>
+          }
+        </div>
+
+        <span class="name">
+          {{ c.displayName }}
+          @if (c.isHost) {
+            <span class="host-badge">{{ 'room.host' | transloco }}</span>
+          }
+        </span>
+
+        @if (c.score !== undefined) {
+          <span class="score">{{ c.score }}</span>
+        }
+
+        @if (canReact() && c.userId !== myUserId()) {
+          <div class="reaction-trigger">
+            <button
+              type="button"
+              class="react-btn"
+              [attr.aria-label]="'match.react' | transloco"
+              (click)="togglePicker(c.userId)"
+            >
+              🙂
+            </button>
+            @if (openPickerFor() === c.userId) {
+              <div class="reaction-picker">
+                @for (emoji of reactions; track emoji) {
+                  <button type="button" (click)="react(c.userId, emoji)">{{ emoji }}</button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ol>
+</div>

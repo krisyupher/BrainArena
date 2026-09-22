@@ -1,4 +1,5 @@
 using BrainArena.Application.Common;
+using BrainArena.Application.Matches;
 using BrainArena.Application.Rooms;
 using BrainArena.Domain.Enums;
 
@@ -6,6 +7,8 @@ namespace BrainArena.Application.Tests.Rooms;
 
 public class RoomValidationTests
 {
+    private static readonly string[] ValidGameModeKeys = [MultipleChoiceGameMode.Key, CalculationGameMode.Key];
+
     private static CreateRoomRequest ValidRequest() => new(
         Name: "Math Duel",
         Topic: RoomTopic.Math,
@@ -18,7 +21,7 @@ public class RoomValidationTests
     [Fact]
     public void Validate_AcceptsARequestWithinAllLimits()
     {
-        var exception = Record.Exception(() => RoomValidation.Validate(ValidRequest()));
+        var exception = Record.Exception(() => RoomValidation.Validate(ValidRequest(), ValidGameModeKeys));
 
         Assert.Null(exception);
     }
@@ -30,7 +33,7 @@ public class RoomValidationTests
     {
         var request = ValidRequest() with { MaxPlayers = maxPlayers };
 
-        Assert.Throws<AppException>(() => RoomValidation.Validate(request));
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
     }
 
     [Fact]
@@ -38,7 +41,7 @@ public class RoomValidationTests
     {
         var request = ValidRequest() with { MinPlayersToStart = 1 };
 
-        Assert.Throws<AppException>(() => RoomValidation.Validate(request));
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
     }
 
     [Fact]
@@ -46,7 +49,7 @@ public class RoomValidationTests
     {
         var request = ValidRequest() with { MaxPlayers = 4, MinPlayersToStart = 5 };
 
-        Assert.Throws<AppException>(() => RoomValidation.Validate(request));
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
     }
 
     [Theory]
@@ -56,7 +59,7 @@ public class RoomValidationTests
     {
         var request = ValidRequest() with { QuestionCount = questionCount };
 
-        Assert.Throws<AppException>(() => RoomValidation.Validate(request));
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
     }
 
     [Theory]
@@ -66,7 +69,7 @@ public class RoomValidationTests
     {
         var request = ValidRequest() with { SecondsPerQuestion = seconds };
 
-        Assert.Throws<AppException>(() => RoomValidation.Validate(request));
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
     }
 
     [Theory]
@@ -76,6 +79,26 @@ public class RoomValidationTests
     {
         var request = ValidRequest() with { Name = name };
 
-        Assert.Throws<AppException>(() => RoomValidation.Validate(request));
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
+    }
+
+    [Fact]
+    public void Validate_RejectsAnUnknownGameMode()
+    {
+        var request = ValidRequest() with { GameMode = "memory" };
+
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
+    }
+
+    [Theory]
+    [InlineData(MultipleChoiceGameMode.Key)]
+    [InlineData(CalculationGameMode.Key)]
+    public void Validate_AcceptsEveryRegisteredGameMode(string gameMode)
+    {
+        var request = ValidRequest() with { GameMode = gameMode };
+
+        var exception = Record.Exception(() => RoomValidation.Validate(request, ValidGameModeKeys));
+
+        Assert.Null(exception);
     }
 }

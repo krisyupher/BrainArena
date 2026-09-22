@@ -1,3 +1,4 @@
+using BrainArena.Application.Matches;
 using BrainArena.Domain.Enums;
 
 namespace BrainArena.Application.Rooms;
@@ -9,7 +10,8 @@ public record CreateRoomRequest(
     int MinPlayersToStart,
     int QuestionCount,
     int SecondsPerQuestion,
-    bool IsPrivate);
+    bool IsPrivate,
+    string GameMode = MultipleChoiceGameMode.Key);
 
 public record RoomSummaryDto(
     Guid Id,

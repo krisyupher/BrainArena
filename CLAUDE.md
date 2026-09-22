@@ -12,16 +12,23 @@ check `README.md`'s intro section for the current feature list before assuming s
 Core non-negotiable rules baked into the design (don't compromise these when touching match code):
 the server is the sole authority over timing, correctness and scoring — clients never receive a
 correct answer before a question closes, and all scoring uses the server's own clock, never a
-client-reported timestamp. The quiz mode itself is pluggable (`IGameMode`) even though only
-multiple-choice exists today.
+client-reported timestamp. The quiz mode itself is pluggable (`IGameMode`); multiple-choice and
+calculation both exist today.
+
+Beyond the original brief's 4 phases, the app also supports **anonymous spectating** (browse the
+lobby and watch a live match without an account — see "Spectator mode" below), a **second game
+mode** (calculation, alongside multiple-choice), reactions, and **mini-tournaments** (elimination
+brackets built on top of ordinary rooms — see "Mini-tournaments" below) — check git history / this
+file's other sections before assuming a feature described only in `README.md`'s phase list is the
+full picture.
 
 ## Commands
 
 **Local dev (three terminals):**
 ```bash
 docker compose up -d                                    # Postgres only, from repo root
-cd backend && dotnet run --project src/BrainArena.Api    # API on :5260, auto-migrates + seeds on start
-cd frontend && npm install && npm start                  # Angular dev server on :4200, proxies /api and /hubs to :5260
+cd backend && dotnet run --project src/BrainArena.Api    # API on :5260, auto-migrates + seeds admin/question bank on start
+cd frontend && npm install && npm start                  # Angular dev server on :4200, proxies /api and /hubs to :5260 (frontend/proxy.conf.json) so the app never hardcodes the backend port
 ```
 
 **Backend** (solution file is `backend/BrainArena.slnx` — the newer XML solution format, not `.sln`):
@@ -74,29 +81,74 @@ match id; the Angular app never needs to learn a match's id at all.
 
 ### The pluggable game mode
 
-`BrainArena.Application/Matches/IGameMode.cs` defines the seam: `ToClientPayload` (never includes
-the correct answer), `ToRevealPayload` (only called after a question closes), `EvaluateAnswer`
-(takes server-computed `timeRemaining`/`timeLimit`, never trusts the client). Only
-`MultipleChoiceGameMode` exists; a room's mode is just a string column (`Room.GameMode`) resolved
-through `IGameModeRegistry`, so a second mode plugs in without touching orchestration code.
+`BrainArena.Application/Matches/IGameMode.cs` defines the seam: `PrepareQuestionsAsync` (sources
+this match's questions — from the admin bank, or generated on the fly), `ToClientPayload` (never
+includes the correct answer), `ToRevealPayload`/`ToReviewEntry` (only ever called after a question
+closes), `EvaluateAnswer` (takes a mode-agnostic `SubmittedAnswer { OptionIndex, NumericValue }`
+plus server-computed `timeRemaining`/`timeLimit`, never trusts the client, and is also where each
+mode validates its own answer shape — e.g. an option index actually in range — rather than
+`MatchOrchestrator` doing it). A room's mode is just a string column (`Room.GameMode`), validated
+against `IGameModeRegistry.ModeKeys` at room-creation time and resolved through the registry at
+match start, so a new mode plugs in by registering another `IGameMode` in
+`Application/DependencyInjection.cs` — no orchestration code changes.
+
+Two modes exist: `MultipleChoiceGameMode` (`Key = "multiple-choice"`, the default, sources
+questions from the admin-curated bank via `IQuestionRepository`) and `CalculationGameMode`
+(`Key = "calculation"`, procedurally generates arithmetic problems at match start — no admin
+authoring, no seed data). Both share one `Question` entity/table, discriminated by
+`Question.Type`; `Options`/`CorrectOptionIndex` are multiple-choice-only (nullable),
+`CorrectNumericAnswer` is calculation-only (nullable). A `CalculationGameMode` question is a
+freshly-constructed, not-yet-persisted `Question` object — `MatchOrchestrator`'s existing
+`db.MatchQuestions.AddRange(...)` cascade-inserts it via EF Core's untracked-reachable-entity
+behavior the same way it already persists bank-sourced questions, so no branching was needed there.
 
 ### One shared SignalR hub, one group per room, reused across a room's whole lifecycle
 
 `RoomHub` (`BrainArena.Api/Hubs/RoomHub.cs`) is the only hub. The Angular `RoomHubService`
 (`frontend/src/app/core/services/room-hub.service.ts`) owns a single app-wide connection —
-connected once the user is authenticated (see the `effect()` in `app.ts`), *not* per-route — and
-components join/leave a `room:{roomId}` SignalR group as they navigate, via `JoinRoomGroup`/
-`LeaveRoomGroup`. That same group is used for lobby presence in the waiting room *and* live match
-events (`QuestionStarted`, `QuestionRevealed`, `MatchEnded`, etc.) — there's no separate
+established unconditionally on app bootstrap, *not* per-route and *not* gated on being logged in
+(anonymous visitors can spectate), and reconnected on any login/logout transition since a
+connection's identity is fixed at handshake time (see the `constructor()` in `app.ts`). Components
+join/leave a `room:{roomId}` SignalR group as they navigate, via `JoinRoomGroup`/`LeaveRoomGroup`
+(players) or `JoinAsSpectator`/`LeaveSpectatorGroup` (anonymous or non-member visitors — see
+"Spectator mode" below). That same group is used for lobby presence in the waiting room *and* live
+match events (`QuestionStarted`, `QuestionRevealed`, `MatchEnded`, etc.) — there's no separate
 "match group". `JoinRoomGroup` also doubles as the reconnect path: if a match is already active
 for that room, it immediately pushes a `MatchResync` payload back to the caller. The waiting-room
-component listens for *both* `MatchStarting` and `MatchResync` as "go to match play" signals —
-this closes a real race where a player's own join (filling the room) triggers auto-start
-server-side before their client has joined the SignalR group to hear the live broadcast.
+component listens for *both* `MatchStarting` and `MatchResync` (plus `MatchSpectatorSync` for
+non-participants) as "go to match play" signals — this closes a real race where a player's own
+join (filling the room) triggers auto-start server-side before their client has joined the SignalR
+group to hear the live broadcast.
 
 Hub methods are REST-adjacent commands (`StartNow`, `SubmitAnswer`, `JoinRoomGroup`,
 `LeaveRoomGroup`); room CRUD (`create`, `join`) stays on the REST `RoomsController` — that split
 (REST for setup, hub for live gameplay) is intentional.
+
+### Spectator mode: anonymous viewing without a class-level `[Authorize]`
+
+Anyone can browse the public room list and watch a live match without an account — only actually
+*playing* (creating/joining/starting/answering) needs one. This meant `RoomHub` could no longer
+carry a class-level `[Authorize]` (that gates the SignalR connection handshake itself, before any
+method dispatch — an anonymous connection would be rejected outright), so every participant-only
+method (`JoinRoomGroup`, `LeaveRoomGroup`, `StartNow`, `SubmitAnswer`, `SendChatMessage`,
+`ReportChatMessage`) carries `[Authorize]` individually instead; a reflection test
+(`RoomHubAuthorizationTests`) guards against a future method forgetting it. `JoinAsSpectator`/
+`LeaveSpectatorGroup` are the anonymous-safe counterparts — no `[Authorize]`, no room-membership
+check, and no `RoomConnectionTracker` entry (spectators have no player-domain disconnect side
+effect to run; SignalR drops group membership automatically when the connection closes).
+
+The broadcasts a spectator receives are the *same* group-wide `QuestionStarted`/`QuestionRevealed`/
+`MatchEnded` events players get — those were already safe (never personalized, never leak an
+answer early) and needed no changes. The one payload that did need a non-personalized sibling is
+`MatchResync` (carries `YourScore`): `MatchOrchestrator.Snapshot(roomId)` /
+`MatchSpectatorSyncPayload` is the spectator equivalent, sent as its own `MatchSpectatorSync` event
+so the frontend never has to guess whether a personalized field is meaningful on a given payload.
+
+Private rooms stay fully gated: `RoomService.GetVisibleRoomDetailAsync(roomId, requestingUserId)`
+reports a private room as "not found" (same message/404 as a nonexistent room, so a non-member
+can't even confirm it exists) unless the caller is an actual member — `RoomsController`'s
+`GetOpenRooms`/`GetById`/`GetChatHistory` and `RoomHub.JoinAsSpectator` all route through this
+instead of the plain `GetRoomDetailAsync` used by already-membership-checked internal call sites.
 
 ### Timing is configurable, not hardcoded, specifically so tests aren't slow
 
@@ -115,23 +167,109 @@ database (`brainarena_test_{guid}`) in `InitializeAsync` and drops it in `Dispos
 shared name would race across xUnit's parallel test-class execution. Requires
 `docker compose up -d` to be running.
 
-### Chat is one component, reused, and only mounted on two pages
+### Chat is one component, reused on every room-lifecycle page, gated on sign-in not on playing
 
 `ChatService`/`ChatRateLimiter`/`ProfanityFilter` all live in `BrainArena.Application.Chat` — note
 `ChatRateLimiter` has zero ASP.NET Core dependency (just a `ConcurrentDictionary`) so, unlike
 `MatchOrchestrator`, it belongs in `Application` (constructor-testable) rather than `Api`, even
-though it's registered as a singleton. "Disabled during questions" is enforced two ways: the
-Angular `Chat` component (`features/room/chat/`) is only ever placed in the `Room` (waiting room)
-and `MatchResults` templates, never `MatchPlay` — and `ChatService.SendMessageAsync` independently
-rejects sends server-side while `Room.Status == InProgress`, so a stale client can't bypass it.
-Reported messages are just flagged (`IsReported`) in the DB; there's no moderation UI yet.
+though it's registered as a singleton. The Angular `Chat` component (`features/room/chat/`) is
+mounted on `Room`, `MatchPlay`, and `MatchResults` alike, in each page's right-hand sidebar
+(`.page-with-sidebar`/`.page-sidebar`, defined once in `styles.scss` and reused by both `Room` and
+`MatchPlay`). Its `canSend` input, not its presence, is what gates writing: any signed-in user can
+send at any point in a room's lifecycle — including mid-match, whether they're playing or just
+spectating — while an anonymous guest always gets a read-only feed (`ChatService.SendMessageAsync`
+enforces the same rule server-side, keyed only on `room.IsPrivate` + membership for private rooms,
+not on `Room.Status`, so a stale client can't bypass it). This was a deliberate Phase 5→7 product
+decision that superseded the original brief's "chat disabled during questions" fairness rule — that
+rule was about not giving *players* an unfair signal-passing channel while answering, which chat
+send/receive timing doesn't actually affect once anyone (not just room members) can read live
+match state anyway. Reported messages are just flagged (`IsReported`) in the DB; there's no
+moderation UI yet.
+
+### Competitors panel is a small shared building block, not a scoreboard duplicate
+
+`features/room/competitors-panel/` renders a ranked list of `CompetitorViewModel`s (userId,
+displayName, optional score/isConnected/isHost) and is reused by both `Room` (waiting-room player
+list, no score yet) and `MatchPlay` (live score, seeded from the room's player list at zero before
+any real `ScoreboardEntry` data has arrived, then overwritten by `questionRevealed`/resync events).
+`MatchPlay`'s reveal panel no longer renders its own inline scoreboard — the sidebar's
+`CompetitorsPanel` is the single always-visible source for standings during a match.
+
+It also owns reactions (Phase 8): a fixed emoji set (`ReactionValidation.AllowedEmojis` on the
+backend, mirrored in the frontend's `ALLOWED_REACTIONS` constant — keep both in sync if this set
+ever changes) sendable at any competitor by any signed-in user, same "player or spectator, just
+needs to be authenticated" gating as chat. `RoomHub.SendReaction` is ephemeral/never persisted —
+purely a `Clients.Group(...).SendAsync("ReactionSent", ...)` broadcast. `CompetitorsPanel`
+subscribes to `RoomHubService.reactionSent` itself (it owns the animation, not the parent page) and
+renders a transient CSS-only `@keyframes` float-and-fade burst per target avatar — no
+`@angular/animations` package, matching the app's zero-dependency convention. Real camera/mic
+(WebRTC) is deliberately **not** built — it needs its own architecture decision (mesh vs. SFU) and
+was explicitly deferred as a separate future initiative when this phase shipped.
+
+### Mini-tournaments: a `Tournament` sits above `Room`/`Match`, reusing 100% of the match machinery
+
+A `Tournament` (`Domain/Entities/Tournament.cs`) is a top-K-advance elimination bracket: players
+join a waiting pool up to `TournamentSize`, and once full (or the creator manually starts it) round
+1 splits them into ordinary `Room`s of `RoomSize` players each (`TournamentRoundRoom` links a round
+to the real `Room`); each room plays a completely normal match end-to-end through the existing
+`MatchOrchestrator`. When a room finishes, the top `AdvancesPerRoom` finishers (capped at
+`roomPlayerCount - 1`, so every room eliminates at least one player and the bracket is guaranteed to
+converge) carry forward into the next round's rooms; a round is final once the advancing player
+count fits in a single room. This reuses Room/Match/`IGameMode`/scoring/SignalR broadcasting
+entirely unchanged — a tournament round's room is just a `Room` a player didn't create themselves.
+
+`TournamentService.HandleRoomMatchFinishedAsync` is the round-advancement entry point, called from
+`MatchOrchestrator.FinalizeMatchAsync` (resolved via `scope.ServiceProvider.GetRequiredService`,
+same captive-dependency-avoidance pattern as the rest of that method — `MatchOrchestrator` is a
+Singleton and can't constructor-inject the Scoped `ITournamentService`). Two rooms in the same round
+routinely finish within moments of each other, so this is genuinely concurrent; `TournamentAdvancementLock`
+(a `ConcurrentDictionary<Guid, SemaphoreSlim>`, one per tournament) serializes advancement, and each
+call re-checks `round.RoundNumber == tournament.CurrentRoundNumber` after acquiring the lock in case
+a sibling call already advanced the bracket while it was waiting.
+
+**EF Core gotcha that cost real debugging time and is worth knowing before touching this code:**
+`HandleRoomMatchFinishedAsync` originally queried the same `Tournament` entity twice on one
+`DbContext` — once before acquiring the lock (just to read the tournament ID to lock on) and once
+after (the real, mutation-driving fetch). EF Core's change tracker/identity map returns the *same
+tracked instance* on a repeat query for an already-tracked entity **without refreshing its
+properties from the database** — so the second call's `tournament.CurrentRoundNumber` silently kept
+showing the pre-advancement value even after a sibling call had already committed the advance,
+defeating the staleness check above and creating two `TournamentRound`s with the same round number.
+The lock itself was serializing correctly the whole time; the bug was purely a stale *read*, and no
+amount of change-tracking tricks on the *write* side (bulk `ExecuteUpdateAsync`, etc.) could have
+fixed it. The fix: `ITournamentRepository.GetTournamentIdForRoomAsync` is a scalar `Guid?`
+projection (projections never enter the change tracker) used for the pre-lock check, so the
+post-lock fetch is the *only* query touching that `Tournament` entity on the DbContext and is
+therefore always a genuinely fresh read. If you add another pre-lock lookup here, make it a
+projection too — don't `Include()` the same entity graph twice on one context and expect the second
+copy to be current.
+
+Adding a new `TournamentRound`/`TournamentRoundRoom` on an already-tracked, pre-existing `Tournament`
+also needs explicit `ITournamentRepository.AddRoundAsync`/`AddRoundRoomAsync` (→ `db.TournamentRounds.AddAsync`/
+`db.TournamentRoundRooms.AddAsync`) rather than `tournament.Rounds.Add(...)` navigation-collection
+adds — the latter gets tracked as `Modified` instead of `Added` for an entity with an explicit
+client-generated key, producing a 0-rows-affected UPDATE instead of an INSERT. Mirrors
+`MatchOrchestrator`'s existing `db.MatchQuestions.AddRange(...)` pattern for the same reason.
+
+SignalR-wise, tournaments get their own group (`RoomHub.TournamentGroupName(id)` = `tournament:{id}`,
+joined/left via `JoinTournamentGroup`/`LeaveTournamentGroup`) plus a standing `tournament-lobby`
+group every connection auto-joins on connect — `TournamentNotifier` sends payload-free
+`TournamentListChanged`/`TournamentUpdated` events (same "client refetches GET" pattern as
+`RoomUpdated`), never tournament data over the wire. Frontend: `features/tournaments/` —
+`tournament-lobby/` (mirrors `lobby/`), `create-tournament-form/` (mirrors `create-room-form/`), and
+`tournament-detail/` (waiting-room player list + join/leave/start before it starts, a round-by-round
+bracket view with a "go to your match" link into the normal `/rooms/:id` page once it has). A
+tournament room's players are added as real `RoomPlayer`s at room-creation time, so once a player
+navigates to their round's room it behaves exactly like any other room they'd joined directly —
+`Room`'s existing participant/spectator/resync logic needs no tournament-specific branching at all.
 
 ### Frontend structure
 
 Standalone components throughout, signals for local state, RxJS `Subject`s for hub events.
 `core/` holds cross-cutting services (auth, admin guard, the hub client, i18n loader); `features/`
 is route-level (`auth/`, `lobby/`, `admin/` — question bank CRUD + import, `room/` — waiting room
-plus `match-play/`, `match-results/`, and `chat/` sub-components, all keyed by room id). i18n via
+plus `match-play/`, `match-results/`, and `chat/` sub-components, all keyed by room id, `tournaments/`
+— bracket lobby/create-form/detail, keyed by tournament id). i18n via
 Transloco, **not** Angular's built-in i18n (needed for runtime language switching without separate
 builds) — Spanish is the default/fallback locale, translation files are
 `frontend/public/i18n/{es,en}.json`. Test runner is **Vitest** (`@angular/build:unit-test`), not

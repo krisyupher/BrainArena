@@ -28,9 +28,15 @@ describe('Room', () => {
             roomUpdated: new Subject<void>(),
             matchStarting: new Subject<{ matchId: string; countdownSeconds: number }>(),
             matchResync: new Subject<unknown>(),
+            matchSpectatorSync: new Subject<unknown>(),
             matchStartFailed: new Subject<string>(),
+            chatMessageReceived: new Subject<unknown>(),
+            chatMessageReported: new Subject<string>(),
+            reactionSent: new Subject<unknown>(),
             joinRoomGroup: () => Promise.resolve(),
             leaveRoomGroup: () => Promise.resolve(),
+            joinAsSpectator: () => Promise.resolve(),
+            leaveAsSpectator: () => Promise.resolve(),
             startNow: () => Promise.resolve()
           }
         }

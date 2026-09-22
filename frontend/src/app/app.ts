@@ -18,14 +18,20 @@ export class App {
   protected readonly activeLang = this.transloco.activeLang;
 
   constructor() {
-    // The hub connection is app-wide, not tied to any one route: connect once the user is
-    // authenticated, keep it alive across navigation, and only tear it down on logout.
+    // The hub connection is app-wide, not tied to any one route or to being logged in — anonymous
+    // visitors can spectate a room/match, so it's established unconditionally on bootstrap. A
+    // connection's identity is fixed at handshake time (the JWT is read once via
+    // accessTokenFactory), so logging in or out mid-session still needs a full reconnect for the
+    // hub to pick up the new auth state — this only fires on an actual transition, not on the
+    // effect's initial run.
+    this.roomHub.connect();
+    let wasAuthenticated = this.auth.isAuthenticated();
     effect(() => {
-      if (this.auth.isAuthenticated()) {
-        this.roomHub.connect();
-      } else {
-        this.roomHub.disconnect();
+      const isAuthenticated = this.auth.isAuthenticated();
+      if (isAuthenticated !== wasAuthenticated) {
+        this.roomHub.disconnect().then(() => this.roomHub.connect());
       }
+      wasAuthenticated = isAuthenticated;
     });
   }
 

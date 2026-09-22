@@ -1,7 +1,6 @@
 using BrainArena.Application.Abstractions;
 using BrainArena.Application.Common;
 using BrainArena.Domain.Entities;
-using BrainArena.Domain.Enums;
 
 namespace BrainArena.Application.Chat;
 
@@ -18,14 +17,13 @@ public class ChatService(
         var room = await rooms.GetByIdAsync(roomId, ct)
             ?? throw new AppException("Room not found.", 404);
 
-        if (room.Status == RoomStatus.InProgress)
+        // Any signed-in user can chat in a public room at any point in its lifecycle — including
+        // during an active match, and whether they're playing or just spectating (product
+        // decision: fairness during questions only restricts *players*' answers, not chat).
+        // Private rooms stay membership-gated, same rule and "not found" wording as viewing one.
+        if (room.IsPrivate && room.Players.All(p => p.UserId != userId))
         {
-            throw new AppException("Chat is disabled while a match is in progress.", 409);
-        }
-
-        if (room.Players.All(p => p.UserId != userId))
-        {
-            throw new AppException("You're not part of this room.", 403);
+            throw new AppException("Room not found.", 404);
         }
 
         if (!rateLimiter.TryConsume(userId))

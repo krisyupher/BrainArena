@@ -1,0 +1,41 @@
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: var(--spacing) 0;
+}
+
+button.option {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 2px solid var(--color-border);
+  text-align: left;
+
+  &.selected {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  }
+
+  &:disabled {
+    opacity: 1;
+  }
+}
+
+div.option {
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+
+  &.correct {
+    border-color: var(--color-success);
+    background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+    font-weight: 600;
+  }
+}
+
+.spectator-tag {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}

@@ -1,0 +1,146 @@
+.competitors-panel {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+
+  h3 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+  }
+}
+
+.competitors-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &.me {
+      .name {
+        font-weight: 700;
+      }
+    }
+
+    &.disconnected {
+      opacity: 0.5;
+    }
+  }
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.reaction-burst {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+  pointer-events: none;
+  animation: reaction-float 1.8s ease-out forwards;
+}
+
+@keyframes reaction-float {
+  0% {
+    transform: translate(-50%, 0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(-50%, -6px) scale(1.15);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-50%, -22px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -32px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.host-badge {
+  margin-left: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.score {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.reaction-trigger {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.react-btn {
+  width: auto;
+  padding: 2px 6px;
+  background: transparent;
+  font-size: 0.95rem;
+  line-height: 1.2;
+
+  &:hover {
+    background: var(--color-bg);
+  }
+}
+
+.reaction-picker {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1;
+  margin-top: 4px;
+  display: flex;
+  gap: 2px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+  button {
+    width: auto;
+    padding: 4px 6px;
+    background: transparent;
+    font-size: 1rem;
+
+    &:hover {
+      background: var(--color-bg);
+    }
+  }
+}

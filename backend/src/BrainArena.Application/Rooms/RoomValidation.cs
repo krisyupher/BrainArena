@@ -15,8 +15,12 @@ public static class RoomValidation
     public const int MinSecondsPerQuestion = 10;
     public const int MaxSecondsPerQuestion = 60;
 
-    public static void Validate(CreateRoomRequest request)
+    public static void Validate(CreateRoomRequest request, IReadOnlyCollection<string> validGameModeKeys)
     {
+        if (!validGameModeKeys.Contains(request.GameMode))
+            throw new AppException("Unknown game mode.");
+
+
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length is < 3 or > 40)
             throw new AppException("Room name must be between 3 and 40 characters.");
 

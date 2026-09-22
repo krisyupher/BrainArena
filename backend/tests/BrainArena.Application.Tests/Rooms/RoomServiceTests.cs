@@ -1,4 +1,5 @@
 using BrainArena.Application.Common;
+using BrainArena.Application.Matches;
 using BrainArena.Application.Rooms;
 using BrainArena.Application.Tests.Fakes;
 using BrainArena.Domain.Enums;
@@ -22,7 +23,8 @@ public class RoomServiceTests
         var rooms = new FakeRoomRepository();
         var notifier = new FakeRoomNotifier();
         var matchOrchestrator = new FakeMatchOrchestrator();
-        return (new RoomService(rooms, users, notifier, matchOrchestrator), users, rooms, notifier);
+        var gameModeRegistry = new GameModeRegistry([new MultipleChoiceGameMode(), new CalculationGameMode()]);
+        return (new RoomService(rooms, users, notifier, matchOrchestrator, gameModeRegistry), users, rooms, notifier);
     }
 
     [Fact]

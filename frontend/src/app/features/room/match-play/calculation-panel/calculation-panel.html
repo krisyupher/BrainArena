@@ -1,0 +1,26 @@
+@if (phase() === 'question') {
+  @if (canAnswer()) {
+    <form class="numeric-form" (ngSubmit)="submit()">
+      <input
+        type="number"
+        inputmode="decimal"
+        [formControl]="answerControl"
+        [placeholder]="'match.numericAnswerPlaceholder' | transloco"
+      />
+      <button type="submit" [disabled]="answerLocked() || answerControl.invalid">
+        {{ 'match.submitAnswer' | transloco }}
+      </button>
+    </form>
+
+    @if (errorMessage()) {
+      <p class="error">{{ errorMessage() }}</p>
+    }
+  } @else {
+    <p class="spectator-tag">{{ 'room.spectating' | transloco }}</p>
+  }
+} @else if (reveal(); as rv) {
+  <p class="calculation-reveal">
+    {{ 'match.correctAnswerWas' | transloco }}
+    <strong>{{ rv.correctNumericAnswer }}</strong>
+  </p>
+}

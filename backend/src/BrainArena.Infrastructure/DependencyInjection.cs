@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
         services.AddScoped<IChatRepository, ChatRepository>();
+        services.AddScoped<ITournamentRepository, TournamentRepository>();
         services.AddScoped<IMatchResultsService, MatchResultsService>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

@@ -1,10 +1,14 @@
+import { GameMode } from './room.model';
+
 export interface QuestionStartedEvent {
   matchId: string;
   matchQuestionId: string;
   index: number;
   totalQuestions: number;
+  kind: GameMode;
   text: string;
-  options: string[];
+  /** Multiple-choice only. */
+  options: string[] | null;
   endsAtUtc: string;
 }
 
@@ -19,7 +23,11 @@ export interface QuestionRevealedEvent {
   matchId: string;
   matchQuestionId: string;
   index: number;
-  correctOptionIndex: number;
+  kind: GameMode;
+  /** Multiple-choice only. */
+  correctOptionIndex: number | null;
+  /** Calculation only. */
+  correctNumericAnswer: number | null;
   explanation: string;
   endsAtUtc: string;
   scoreboard: ScoreboardEntry[];
@@ -34,9 +42,11 @@ export interface RankingEntry {
 
 export interface QuestionReviewEntry {
   index: number;
+  kind: GameMode;
   text: string;
-  options: string[];
-  correctOptionIndex: number;
+  options: string[] | null;
+  correctOptionIndex: number | null;
+  correctNumericAnswer: number | null;
   explanation: string;
 }
 
@@ -54,6 +64,15 @@ export interface MatchResyncEvent {
   currentQuestion: QuestionStartedEvent | null;
   currentReveal: QuestionRevealedEvent | null;
   yourScore: number;
+  scoreboard: ScoreboardEntry[];
+}
+
+/** Non-personalized counterpart of MatchResyncEvent, for a spectator joining mid-match. */
+export interface MatchSpectatorSyncEvent {
+  matchId: string;
+  phase: MatchPhase;
+  currentQuestion: QuestionStartedEvent | null;
+  currentReveal: QuestionRevealedEvent | null;
   scoreboard: ScoreboardEntry[];
 }
 

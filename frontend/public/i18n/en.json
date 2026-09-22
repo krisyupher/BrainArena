@@ -2,7 +2,8 @@
   "app": {
     "title": "BrainArena",
     "logout": "Log out",
-    "admin": "Admin"
+    "admin": "Admin",
+    "tournaments": "Tournaments"
   },
   "auth": {
     "login": {
@@ -31,6 +32,8 @@
     "createRoom": "Create room",
     "noRooms": "No active rooms yet. Create the first one!",
     "join": "Join",
+    "watch": "Watch",
+    "loginToPlay": "Log in to create or join a room",
     "players": "Players",
     "status": {
       "Waiting": "Waiting",
@@ -47,6 +50,11 @@
   "createRoom": {
     "title": "Create room",
     "name": "Room name",
+    "gameMode": "Game mode",
+    "gameModeOption": {
+      "multiple-choice": "Multiple choice",
+      "calculation": "Calculation"
+    },
     "topic": "Topic",
     "maxPlayers": "Max players",
     "minPlayersToStart": "Min players to start",
@@ -62,17 +70,26 @@
     "shareCode": "Share code",
     "startNow": "Start now",
     "waitingForHost": "Waiting for the host to start the match...",
-    "leave": "Leave room"
+    "leave": "Leave room",
+    "back": "Back to lobby",
+    "notFound": "This room could not be found.",
+    "spectating": "You're watching as a spectator.",
+    "signUpToPlay": "Sign up or log in to play"
   },
   "match": {
     "getReady": "Get ready! The match starts in...",
     "questionProgress": "Question {{index}} of {{total}}",
     "reviewing": "Question review",
     "scoreboard": "Scoreboard",
+    "competitors": "Competitors",
+    "react": "Send a reaction",
     "loadingResults": "Loading results...",
     "finalResults": "Final results",
     "review": "Question review",
-    "backToLobby": "Back to rooms"
+    "backToLobby": "Back to rooms",
+    "numericAnswerPlaceholder": "Your answer",
+    "submitAnswer": "Submit",
+    "correctAnswerWas": "The correct answer was"
   },
   "admin": {
     "title": "Question bank",
@@ -102,6 +119,26 @@
     "send": "Send",
     "report": "Report",
     "reported": "Reported",
-    "empty": "No messages yet."
+    "empty": "No messages yet.",
+    "signUpToChat": "Sign up to send messages"
+  },
+  "tournaments": {
+    "title": "Tournaments",
+    "createTournament": "Create tournament",
+    "noTournaments": "No open tournaments yet. Create the first one!",
+    "view": "View",
+    "back": "Back to tournaments",
+    "tournamentSize": "Tournament size",
+    "roomSize": "Room size",
+    "advancesPerRoom": "Advances per room",
+    "roundFormat": "top {{advances}} of {{roomSize}} advance each round",
+    "players": "Players",
+    "join": "Join tournament",
+    "leave": "Leave tournament",
+    "champion": "Champion",
+    "goToYourMatch": "Go to your match",
+    "round": "Round {{number}}",
+    "finalRound": "Final",
+    "eliminatedAtRound": "(eliminated round {{round}})"
   }
 }

@@ -96,6 +96,9 @@ namespace BrainArena.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("AnsweredAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal?>("NumericAnswer")
+                        .HasColumnType("numeric");
+
                     b.Property<int>("PointsAwarded")
                         .HasColumnType("integer");
 
@@ -160,7 +163,10 @@ namespace BrainArena.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("CorrectOptionIndex")
+                    b.Property<decimal?>("CorrectNumericAnswer")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("CorrectOptionIndex")
                         .HasColumnType("integer");
 
                     b.Property<int>("Difficulty")
@@ -176,7 +182,6 @@ namespace BrainArena.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(5)");
 
                     b.PrimitiveCollection<string[]>("Options")
-                        .IsRequired()
                         .HasColumnType("text[]");
 
                     b.Property<string>("Text")
@@ -184,6 +189,11 @@ namespace BrainArena.Infrastructure.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -273,6 +283,136 @@ namespace BrainArena.Infrastructure.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RoomPlayers");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.Tournament", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AdvancesPerRoom")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CurrentRoundNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("GameMode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("MinPlayersToStart")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("QuestionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RoomSize")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SecondsPerQuestion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("TournamentSize")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorUserId");
+
+                    b.ToTable("Tournaments");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.TournamentPlayer", b =>
+                {
+                    b.Property<Guid>("TournamentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("EliminatedAtRound")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("TournamentId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TournamentPlayers");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.TournamentRound", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsFinal")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("RoundNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TournamentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TournamentId");
+
+                    b.ToTable("TournamentRounds");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.TournamentRoundRoom", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TournamentRoundId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId")
+                        .IsUnique();
+
+                    b.HasIndex("TournamentRoundId");
+
+                    b.ToTable("TournamentRoundRooms");
                 });
 
             modelBuilder.Entity("BrainArena.Domain.Entities.User", b =>
@@ -428,6 +568,66 @@ namespace BrainArena.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BrainArena.Domain.Entities.Tournament", b =>
+                {
+                    b.HasOne("BrainArena.Domain.Entities.User", "CreatorUser")
+                        .WithMany()
+                        .HasForeignKey("CreatorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatorUser");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.TournamentPlayer", b =>
+                {
+                    b.HasOne("BrainArena.Domain.Entities.Tournament", "Tournament")
+                        .WithMany("Players")
+                        .HasForeignKey("TournamentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BrainArena.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tournament");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.TournamentRound", b =>
+                {
+                    b.HasOne("BrainArena.Domain.Entities.Tournament", "Tournament")
+                        .WithMany("Rounds")
+                        .HasForeignKey("TournamentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tournament");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.TournamentRoundRoom", b =>
+                {
+                    b.HasOne("BrainArena.Domain.Entities.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BrainArena.Domain.Entities.TournamentRound", "TournamentRound")
+                        .WithMany("RoundRooms")
+                        .HasForeignKey("TournamentRoundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+
+                    b.Navigation("TournamentRound");
+                });
+
             modelBuilder.Entity("BrainArena.Domain.Entities.Match", b =>
                 {
                     b.Navigation("Players");
@@ -443,6 +643,18 @@ namespace BrainArena.Infrastructure.Data.Migrations
             modelBuilder.Entity("BrainArena.Domain.Entities.Room", b =>
                 {
                     b.Navigation("Players");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.Tournament", b =>
+                {
+                    b.Navigation("Players");
+
+                    b.Navigation("Rounds");
+                });
+
+            modelBuilder.Entity("BrainArena.Domain.Entities.TournamentRound", b =>
+                {
+                    b.Navigation("RoundRooms");
                 });
 #pragma warning restore 612, 618
         }

@@ -5,6 +5,7 @@ public class MatchAnswer
     public Guid MatchQuestionId { get; set; }
     public Guid UserId { get; set; }
     public int? SelectedOptionIndex { get; set; }
+    public decimal? NumericAnswer { get; set; }
     public int PointsAwarded { get; set; }
     public DateTimeOffset AnsweredAt { get; set; }
 

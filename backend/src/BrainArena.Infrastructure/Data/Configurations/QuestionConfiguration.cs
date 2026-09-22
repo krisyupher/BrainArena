@@ -10,8 +10,8 @@ public class QuestionConfiguration : IEntityTypeConfiguration<Question>
     {
         builder.HasKey(q => q.Id);
         builder.Property(q => q.Topic).HasConversion<string>().HasMaxLength(20);
+        builder.Property(q => q.Type).HasConversion<string>().HasMaxLength(20);
         builder.Property(q => q.Text).IsRequired();
-        builder.Property(q => q.Options).IsRequired();
         builder.Property(q => q.Explanation).IsRequired();
         builder.Property(q => q.Language).IsRequired().HasMaxLength(5);
 

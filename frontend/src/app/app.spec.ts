@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { App } from './app';
+import { RoomHubService } from './core/services/room-hub.service';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -13,7 +14,16 @@ describe('App', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideTransloco({ config: { availableLangs: ['es', 'en'], defaultLang: 'es' } })
+        provideTransloco({ config: { availableLangs: ['es', 'en'], defaultLang: 'es' } }),
+        {
+          // The hub connects unconditionally on bootstrap now (spectator mode) — stub it out so
+          // this test doesn't attempt a real SignalR handshake against a relative URL.
+          provide: RoomHubService,
+          useValue: {
+            connect: () => Promise.resolve(),
+            disconnect: () => Promise.resolve()
+          }
+        }
       ]
     }).compileComponents();
   });

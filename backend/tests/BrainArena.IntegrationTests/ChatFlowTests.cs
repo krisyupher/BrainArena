@@ -12,9 +12,10 @@ namespace BrainArena.IntegrationTests;
 
 /// <summary>
 /// Exercises live chat (Phase 4) over the real SignalR pipeline: send/receive, the server-side
-/// 1-message-per-2-seconds rate limit, the profanity filter, and reporting a message. The "chat
-/// is blocked while a match is in progress" rule is already covered by a fast unit test
-/// (ChatServiceTests) — no need to run a full ~1-minute match here too.
+/// 1-message-per-2-seconds rate limit, the profanity filter, and reporting a message. Chat is no
+/// longer disabled while a match is in progress (Phase 7 product decision — fairness only
+/// restricts players' answers) — that shape is covered by ChatServiceTests, no need for a full
+/// ~1-minute match here too.
 /// </summary>
 public class ChatFlowTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {

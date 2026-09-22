@@ -87,6 +87,9 @@ public class QuestionService(IQuestionRepository questions) : IQuestionService
         Language = request.Language
     };
 
+    // QuestionService only ever manages the admin-authored multiple-choice bank (calculation
+    // questions are generated on the fly by CalculationGameMode and never go through here), so
+    // Options/CorrectOptionIndex are always populated on anything this service reads or writes.
     private static QuestionDto MapDto(Question q) =>
-        new(q.Id, q.Topic, q.Difficulty, q.Text, q.Options, q.CorrectOptionIndex, q.Explanation, q.Language);
+        new(q.Id, q.Topic, q.Difficulty, q.Text, q.Options!, q.CorrectOptionIndex!.Value, q.Explanation, q.Language);
 }

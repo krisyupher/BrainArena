@@ -145,9 +145,11 @@ public class FakeMatchOrchestrator : IMatchOrchestrator
 
     public Task StartNowAsync(Guid roomId, Guid requestingUserId, CancellationToken ct = default) => Task.CompletedTask;
 
-    public Task SubmitAnswerAsync(Guid roomId, Guid userId, Guid matchQuestionId, int selectedOptionIndex) => Task.CompletedTask;
+    public Task SubmitAnswerAsync(Guid roomId, Guid userId, Guid matchQuestionId, BrainArena.Application.Matches.SubmittedAnswer answer) => Task.CompletedTask;
 
     public BrainArena.Application.Matches.MatchResyncPayload? Join(Guid roomId, Guid userId) => null;
+
+    public BrainArena.Application.Matches.MatchSpectatorSyncPayload? Snapshot(Guid roomId) => null;
 
     public void MarkDisconnected(Guid roomId, Guid userId)
     {

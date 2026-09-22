@@ -1,14 +1,15 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Subscription } from 'rxjs';
+import { AuthService } from '../../core/services/auth.service';
 import { RoomService } from '../../core/services/room.service';
 import { RoomHubService } from '../../core/services/room-hub.service';
 import { RoomSummary } from '../../core/models/room.model';
 import { CreateRoomForm } from './create-room-form/create-room-form';
 
 @Component({
-  imports: [TranslocoPipe, CreateRoomForm],
+  imports: [TranslocoPipe, RouterLink, CreateRoomForm],
   selector: 'app-lobby',
   styleUrl: './lobby.scss',
   templateUrl: './lobby.html'
@@ -17,6 +18,7 @@ export class Lobby implements OnInit, OnDestroy {
   private readonly roomService = inject(RoomService);
   private readonly roomHub = inject(RoomHubService);
   private readonly router = inject(Router);
+  protected readonly auth = inject(AuthService);
 
   readonly rooms = signal<RoomSummary[]>([]);
   readonly loading = signal(true);
