@@ -30,23 +30,32 @@ public class RoomService(
         var host = await users.GetByIdAsync(hostUserId, ct)
             ?? throw new AppException("Host user not found.", 404);
 
+        // A solitary practice room is always exactly 1/1 and never shareable — force these
+        // server-side regardless of what the client sent, so a crafted payload can't create a
+        // many-player "solitary" room.
+        var isSolitary = request.Kind == RoomKind.Solitary;
+        var maxPlayers = isSolitary ? 1 : request.MaxPlayers;
+        var minPlayersToStart = isSolitary ? 1 : request.MinPlayersToStart;
+        var isPrivate = isSolitary ? false : request.IsPrivate;
+
         var room = new Room
         {
             Id = Guid.NewGuid(),
             Name = request.Name.Trim(),
             Topic = request.Topic,
-            MaxPlayers = request.MaxPlayers,
-            MinPlayersToStart = request.MinPlayersToStart,
+            MaxPlayers = maxPlayers,
+            MinPlayersToStart = minPlayersToStart,
             QuestionCount = request.QuestionCount,
             SecondsPerQuestion = request.SecondsPerQuestion,
-            IsPrivate = request.IsPrivate,
+            IsPrivate = isPrivate,
             GameMode = request.GameMode,
             Status = RoomStatus.Waiting,
+            Kind = request.Kind,
             HostUserId = hostUserId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        if (request.IsPrivate)
+        if (isPrivate)
         {
             room.ShareCode = await GenerateUniqueShareCodeAsync(ct);
         }
@@ -62,6 +71,21 @@ public class RoomService(
         await rooms.AddAsync(room, ct);
         await rooms.SaveChangesAsync(ct);
         await notifier.NotifyRoomListChangedAsync(ct);
+
+        if (isSolitary)
+        {
+            // The room is already "full" (1/1) — auto-start immediately rather than waiting for a
+            // second player who can never arrive. TryAutoStartAsync runs inside its own DbContext
+            // scope (MatchOrchestrator is a Singleton) and, if the match actually starts, commits
+            // Status = InProgress there. A plain GetByIdAsync re-fetch here would use the SAME
+            // DbContext that already has this exact `room` tracked (from AddAsync/SaveChangesAsync
+            // above) — EF Core's identity map would hand back that same stale instance instead of
+            // reading the committed row, silently no-op'ing the "re-fetch." Use the no-tracking
+            // status projection instead, and apply just that one field to the local `room` we
+            // already have (safe — nothing else can touch a 1-player solitary room in this window).
+            await matchOrchestrator.TryAutoStartAsync(room.Id, ct);
+            room.Status = await rooms.GetStatusNoTrackingAsync(room.Id, ct) ?? room.Status;
+        }
 
         return MapDetail(room);
     }
@@ -179,12 +203,13 @@ public class RoomService(
     }
 
     private static RoomSummaryDto MapSummary(Room room) => new(
-        room.Id, room.Name, room.Topic, room.Players.Count, room.MaxPlayers, room.Status, room.IsPrivate);
+        room.Id, room.Name, room.Topic, room.GameMode, room.QuestionCount, room.SecondsPerQuestion,
+        room.Players.Count, room.MaxPlayers, room.Status, room.IsPrivate, room.Kind);
 
     private static RoomDetailDto MapDetail(Room room) => new(
         room.Id, room.Name, room.Topic, room.MaxPlayers, room.MinPlayersToStart,
         room.QuestionCount, room.SecondsPerQuestion, room.IsPrivate, room.ShareCode,
-        room.Status, room.HostUserId,
+        room.Status, room.HostUserId, room.Kind,
         room.Players
             .Select(p => new RoomPlayerDto(p.UserId, p.User?.DisplayName ?? string.Empty))
             .ToList());

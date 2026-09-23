@@ -1,15 +1,93 @@
 :root {
-  --color-bg: #f5f6fa;
-  --color-surface: #ffffff;
-  --color-text: #1c1e26;
-  --color-muted: #6b7280;
-  --color-primary: #4f46e5;
+  /* Surfaces */
+  --color-bg: #0a0d18;
+  --color-bg-deep: #05060c;
+  --color-surface: #151b30;
+  --color-surface-elevated: #1c2340;
+  --color-border: rgba(148, 150, 200, 0.16);
+  --color-border-strong: rgba(150, 138, 255, 0.4);
+
+  /* Text */
+  --color-text: #eef0ff;
+  --color-muted: #8b93b8;
+
+  /* Brand / accents */
+  --color-primary: #7c6bff;
+  --color-primary-dark: #5b3df0;
   --color-primary-contrast: #ffffff;
-  --color-border: #e2e4ea;
-  --color-error: #dc2626;
-  --color-success: #16a34a;
-  --radius: 10px;
+  --color-cta: #2ee6a6;
+  --color-cta-dark: #059669;
+  --color-gold: #ffcf4d;
+  --color-gold-dark: #f7931e;
+  --color-error: #ff5c72;
+  --color-success: #2ee6a6;
+  --color-warning: #ffb84d;
+
+  /* Shape / motion */
+  --radius: 14px;
+  --radius-sm: 8px;
   --spacing: 16px;
+  --shadow-panel: 0 14px 34px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  --shadow-raised: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --transition-fast: 150ms ease;
+  --transition-base: 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Type */
+  --font-display: 'Rajdhani', 'Oxanium', sans-serif;
+  --font-body:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+
+  /* Theme-sensitive surfaces that can't be expressed as a plain color token (gradients,
+     translucent overlays tuned per-backdrop) — kept as their own variables so the header/inputs
+     flip cleanly between themes instead of needing per-component [data-theme] overrides. */
+  --header-bg: linear-gradient(180deg, rgba(21, 27, 48, 0.92) 0%, rgba(10, 13, 24, 0.88) 100%);
+  --header-chip-bg: rgba(255, 255, 255, 0.04);
+  --header-track-bg: rgba(0, 0, 0, 0.3);
+  --input-bg: rgba(5, 7, 16, 0.5);
+  --brand-title-from: #ffffff;
+  --brand-title-to: #c7c2ff;
+}
+
+/* Light theme — same premium panel/glow language as dark, just re-tuned for a bright backdrop:
+   softer shadows in place of neon glows, deeper accent shades for contrast against white/light
+   surfaces. --color-primary/--color-cta/--color-gold stay close to their dark-mode hues so brand
+   identity survives the switch. */
+:root[data-theme='light'] {
+  --color-bg: #eef0fa;
+  --color-bg-deep: #e4e7f5;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f5f6fd;
+  --color-border: rgba(60, 60, 120, 0.12);
+  --color-border-strong: rgba(91, 61, 240, 0.35);
+
+  --color-text: #1b2140;
+  --color-muted: #6b7094;
+
+  --color-primary: #6d5cf0;
+  --color-primary-dark: #4c37d6;
+  --color-primary-contrast: #ffffff;
+  --color-cta: #17b787;
+  --color-cta-dark: #0d7a58;
+  --color-gold: #f0a723;
+  --color-gold-dark: #c9760a;
+  --color-error: #e0364f;
+  --color-success: #17b787;
+  --color-warning: #d98a1a;
+
+  --shadow-panel: 0 10px 26px rgba(30, 34, 70, 0.1), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  --shadow-raised: 0 4px 12px rgba(30, 34, 70, 0.1);
+
+  --header-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(238, 240, 250, 0.9) 100%);
+  --header-chip-bg: rgba(30, 30, 80, 0.05);
+  --header-track-bg: rgba(30, 30, 80, 0.07);
+  --input-bg: rgba(30, 30, 80, 0.035);
+  --brand-title-from: #4c37d6;
+  --brand-title-to: #6d5cf0;
 }
 
 * {
@@ -23,34 +101,98 @@ body {
 
 body {
   margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  background: var(--color-bg);
+  font-family: var(--font-body);
   color: var(--color-text);
+  background-color: var(--color-bg-deep);
+  background-image:
+    radial-gradient(ellipse 900px 560px at 12% -8%, rgba(124, 107, 255, 0.28), transparent 60%),
+    radial-gradient(ellipse 700px 520px at 108% 6%, rgba(46, 230, 166, 0.12), transparent 55%),
+    radial-gradient(ellipse 1000px 650px at 50% 118%, rgba(91, 61, 240, 0.22), transparent 60%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 64px
+    ),
+    radial-gradient(ellipse 140% 100% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+:root[data-theme='light'] body {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse 900px 560px at 12% -8%, rgba(124, 107, 255, 0.1), transparent 60%),
+    radial-gradient(ellipse 700px 520px at 108% 6%, rgba(23, 183, 135, 0.08), transparent 55%),
+    radial-gradient(ellipse 1000px 650px at 50% 118%, rgba(91, 61, 240, 0.08), transparent 60%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(20, 20, 60, 0.02) 0px,
+      rgba(20, 20, 60, 0.02) 1px,
+      transparent 1px,
+      transparent 64px
+    ),
+    radial-gradient(ellipse 140% 100% at 50% 40%, transparent 70%, rgba(210, 212, 230, 0.35) 100%);
 }
 
 h1,
 h2,
 h3 {
   margin: 0 0 var(--spacing);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 button {
   cursor: pointer;
-  border: none;
-  border-radius: var(--radius);
-  padding: 10px 16px;
+  border: 1px solid var(--color-primary-dark);
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-family: var(--font-display);
+  font-weight: 600;
   font-size: 1rem;
-  background: var(--color-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--color-primary-contrast);
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.18) inset,
+    0 -3px 0 rgba(0, 0, 0, 0.18) inset,
+    var(--shadow-raised);
+  transition:
+    transform var(--transition-fast),
+    filter var(--transition-fast),
+    box-shadow var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
+    filter: brightness(0.96);
+  }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    filter: grayscale(0.3);
+  }
+
+  &.secondary {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      color: var(--color-text);
+      border-color: var(--color-border-strong);
+      filter: none;
+    }
   }
 }
 
@@ -59,28 +201,118 @@ select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
   font-size: 1rem;
-  background: var(--color-surface);
+  background: var(--input-bg);
   color: var(--color-text);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(124, 107, 255, 0.25);
+  }
 }
 
 label {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--color-muted);
   margin-bottom: var(--spacing);
 }
 
 a {
   color: var(--color-primary);
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: #a79bff;
+  }
 }
 
 .error {
   color: var(--color-error);
   font-size: 0.9rem;
+}
+
+/* Small glowing status indicator, e.g. "● WAITING" */
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px 1px currentColor;
+  }
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Small inline SVG icons used alongside labels throughout the app. */
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* Pulsing emphasis for a live countdown number. */
+@keyframes pulse-glow {
+  0%,
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 18px rgba(124, 107, 255, 0.45);
+  }
+  50% {
+    transform: scale(1.08);
+    text-shadow: 0 0 32px rgba(124, 107, 255, 0.75);
+  }
+}
+
+/* Brief highlight when a value (e.g. a score) increases. */
+@keyframes value-bump {
+  0% {
+    transform: scale(1);
+    color: var(--color-success);
+    text-shadow: 0 0 12px rgba(46, 230, 166, 0.7);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+    color: inherit;
+    text-shadow: none;
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Auth pages (login/register) */
@@ -90,19 +322,32 @@ a {
   align-items: center;
   justify-content: center;
   padding: var(--spacing);
+  background: radial-gradient(ellipse 520px 420px at 50% 40%, rgba(124, 107, 255, 0.16), transparent 65%);
 }
 
 .auth-card {
   width: 100%;
   max-width: 360px;
-  background: var(--color-surface);
-  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius) + 4px);
   padding: calc(var(--spacing) * 1.5);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-panel);
 
   button {
     width: 100%;
   }
+}
+
+.form-eyebrow {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 4px;
 }
 
 .switch-link {

@@ -17,10 +17,12 @@ calculation both exist today.
 
 Beyond the original brief's 4 phases, the app also supports **anonymous spectating** (browse the
 lobby and watch a live match without an account — see "Spectator mode" below), a **second game
-mode** (calculation, alongside multiple-choice), reactions, and **mini-tournaments** (elimination
-brackets built on top of ordinary rooms — see "Mini-tournaments" below) — check git history / this
-file's other sections before assuming a feature described only in `README.md`'s phase list is the
-full picture.
+mode** (calculation, alongside multiple-choice), reactions, **mini-tournaments** (elimination
+brackets built on top of ordinary rooms — see "Mini-tournaments" below), **solitary practice
+rooms** (single-player, auto-starts immediately — see "Rooms have a Kind" below), a light theme
+alongside the dark default, and a single unified create flow for rooms/tournaments/practice — check
+git history / this file's other sections before assuming a feature described only in `README.md`'s
+phase list is the full picture.
 
 ## Commands
 
@@ -255,25 +257,143 @@ SignalR-wise, tournaments get their own group (`RoomHub.TournamentGroupName(id)`
 joined/left via `JoinTournamentGroup`/`LeaveTournamentGroup`) plus a standing `tournament-lobby`
 group every connection auto-joins on connect — `TournamentNotifier` sends payload-free
 `TournamentListChanged`/`TournamentUpdated` events (same "client refetches GET" pattern as
-`RoomUpdated`), never tournament data over the wire. Frontend: `features/tournaments/` —
-`tournament-lobby/` (mirrors `lobby/`), `create-tournament-form/` (mirrors `create-room-form/`), and
-`tournament-detail/` (waiting-room player list + join/leave/start before it starts, a round-by-round
-bracket view with a "go to your match" link into the normal `/rooms/:id` page once it has). A
-tournament room's players are added as real `RoomPlayer`s at room-creation time, so once a player
-navigates to their round's room it behaves exactly like any other room they'd joined directly —
-`Room`'s existing participant/spectator/resync logic needs no tournament-specific branching at all.
+`RoomUpdated`), never tournament data over the wire. Frontend: tournaments no longer have their own
+list page or route (`/tournaments` was removed — see "Unified create flow" below); browsing them is
+a tab on `/lobby`, and `features/tournaments/` now holds only `tournament-detail/` — waiting-room
+player list + join/leave/start before it starts, a round-by-round bracket view with a "go to your
+match" link into the normal `/rooms/:id` page once it has. A tournament room's players are added as
+real `RoomPlayer`s at room-creation time, so once a player navigates to their round's room it
+behaves exactly like any other room they'd joined directly — `Room`'s existing
+participant/spectator/resync logic needs no tournament-specific branching at all.
+
+### Rooms have a Kind: Multiplayer vs. Solitary (practice)
+
+`Room.Kind` (`RoomKind` enum: `Multiplayer`/`Solitary`, EF-converted to a string column like
+`Status`/`Topic`/`GameMode`) distinguishes an ordinary room from a single-player practice room. A
+solitary room is always exactly 1/1 and never private — `RoomValidation` skips the ordinary
+2-player floor entirely for `Kind == Solitary` rather than lowering the shared
+`MinPlayersLimit`/`MaxPlayersLimit` constants (those stay untouched because `TournamentValidation`
+reuses them directly for `RoomSize` bounds), and `RoomService.CreateRoomAsync` forces
+`MaxPlayers`/`MinPlayersToStart` to 1 and `IsPrivate` to `false` server-side regardless of what the
+client sent, so a crafted payload can't create a many-player "solitary" room.
+
+A solitary room auto-starts **synchronously inside the create request itself** — since it's already
+"full" (1/1) the moment it's created, `CreateRoomAsync` calls the existing
+`matchOrchestrator.TryAutoStartAsync` right after saving (the same call `JoinRoomAsync` makes when a
+room fills up; `MatchStartRules.CanAutoStart` already just checks `Players.Count >= MaxPlayers`, no
+new orchestrator logic needed). **The non-obvious part**: re-checking the room's status afterwards
+to build the response DTO can't just call `IRoomRepository.GetByIdAsync` again on the same
+`DbContext` — `RoomService` is Scoped (one `DbContext` per request) while `MatchOrchestrator` is a
+Singleton that mutates the row via its *own* separately-scoped `DbContext` inside
+`TryAutoStartAsync`. A second `GetByIdAsync` call on `RoomService`'s own already-tracking context
+hits EF Core's identity map and silently returns the *same stale in-memory instance* instead of
+re-reading the database — the exact class of bug already documented in the Mini-tournaments section
+above, encountered a second time while building this feature. The fix:
+`IRoomRepository.GetStatusNoTrackingAsync` is a scalar `AsNoTracking()` projection (never enters the
+change tracker, so it can't hit that trap) used to refresh just the `Status` field on the local
+`room` object before mapping the response. If a room's `PrepareQuestionsAsync` can't produce enough
+questions for its topic, the match never starts and `CreateRoomAsync`'s response correctly reports
+`Status: Waiting` — the frontend treats that as a creation *failure* for a solitary room specifically
+(unlike a multiplayer room, nobody can ever join a 1/1 room to retry auto-start), showing an inline
+error instead of navigating anywhere.
+
+### Unified create flow: one form, one button, three kinds
+
+`/lobby` is the single entry point for browsing and creating anything playable — it replaced the
+old separate `/tournaments` list page (still just `/tournaments/:id` for viewing one bracket).
+`Lobby` has three tabs (`activeTab` signal: `'multiplayer' | 'tournament' | 'solitary'`, seedable
+from a `?tab=` query param — `tournament-detail`'s back-link uses this to land back on the right
+tab) fetching `RoomService.getOpenRooms()` (filtered client-side to `kind === 'Multiplayer'`) and
+`TournamentService.getOpenTournaments()` in parallel; the Solitary tab has no browsable list at all
+(a solitary room is never private and briefly *does* show up in `GetOpenRoomsAsync`'s
+`!IsPrivate && (Waiting || InProgress)` filter while its short match plays, but that's not
+meaningfully something to browse) — instead it renders the shared `EmptyState` component as a
+"practice now" call-to-action.
+
+One `CreateGameForm` (`features/lobby/create-game-form/`, replacing the old separate
+`create-room-form/`/`create-tournament-form/`) handles all three kinds behind a `kind` form control,
+pre-selected to whichever lobby tab was active when it opened. Field visibility branches on `kind`
+in the template; submission routes to `RoomService.create(...)` (multiplayer/solitary) or
+`TournamentService.create(...)` (tournament). Names are **always auto-generated**, never typed — no
+kind has a manual name input. `CreateGameForm` builds the name from translated game-mode/topic
+fragments (`"{{mode}} · {{topic}}"`, topic omitted for calculation mode) with a kind-specific prefix
+(`"Practice: "` / `"Tournament: "` / no prefix for multiplayer) — this is a frontend-only concern in
+both directions: `CreateTournamentRequest.Name` and `CreateRoomRequest.Name` are still ordinary
+required string fields server-side, exactly as before, just never exposed as an editable `<input>`
+anymore. Post-submit navigation differs per kind: tournament → `/tournaments/:id`; multiplayer →
+share-code panel or `/rooms/:id` (unchanged from before); solitary → checks the *response's*
+`status` field and goes straight to `/rooms/:id/play` if it's already `InProgress` (see "Rooms have
+a Kind" above) — `MatchPlay.ngOnInit` needs zero changes to handle this, since joining the SignalR
+group for a room with an already-active match already triggers the existing `MatchResync` path.
+
+### Header settings dropdown + light/dark theme
+
+The header collapsed its always-visible language-switch/admin-link/logout row into a single
+trigger + dropdown on `App` (`app.ts`/`app.html`/`app.scss`): the player chip (avatar + name) for a
+signed-in user, or a small gear icon for an anonymous visitor (who gets language + theme only — no
+admin/logout). This is the **first outside-click-to-close popover in the codebase** — everything
+else that opens/closes (e.g. `CompetitorsPanel`'s reaction picker) only closes via re-click or an
+explicit action; `App`'s `@HostListener('document:click')` + injected `ElementRef` containment check
+is a new, deliberately simple pattern, not a reuse of an existing one.
+
+`ThemeService` (`core/services/theme.service.ts`) is signal-based, mirroring `AuthService`'s
+localStorage pattern (`brainarena.theme` key). Avoiding a flash of the wrong theme on load needed
+more than the service itself, though: `App`'s constructor (where a service would normally be
+injected eagerly) only runs *after* Angular has bootstrapped and the browser has already painted
+once — too late. `index.html` has a tiny synchronous `<script>` in `<head>`, before any
+stylesheet/bundle tag, that reads `localStorage`/`prefers-color-scheme` and sets
+`data-theme="light"|"dark"` on `<html>` immediately; `ThemeService` then just reads that attribute
+back (rather than recomputing storage/`matchMedia` a second time) to seed its own signal, so there's
+one source of truth. `styles.scss` defines the light palette as a `:root[data-theme="light"]`
+override block for every color token, plus a handful of theme-sensitive non-color values that
+can't be plain color tokens (`--header-bg` gradient, `--input-bg`, `--brand-title-from/to` for the
+gradient-text logo) — `--color-primary`/`--color-cta`/`--color-gold` stay close to their dark-mode
+hues in light mode so brand identity survives the switch; only surfaces, borders, text, and shadow
+softness actually change.
 
 ### Frontend structure
 
 Standalone components throughout, signals for local state, RxJS `Subject`s for hub events.
-`core/` holds cross-cutting services (auth, admin guard, the hub client, i18n loader); `features/`
-is route-level (`auth/`, `lobby/`, `admin/` — question bank CRUD + import, `room/` — waiting room
-plus `match-play/`, `match-results/`, and `chat/` sub-components, all keyed by room id, `tournaments/`
-— bracket lobby/create-form/detail, keyed by tournament id). i18n via
+`core/` holds cross-cutting services (auth, admin guard, the hub client, theme, i18n loader);
+`shared/` holds small reusable presentational components (`LoadingSkeleton`/`EmptyState`/
+`ErrorBanner`); `features/` is route-level (`auth/`, `lobby/` — the unified Multiplayer/Tournament/
+Solitary browse-and-create page, plus its `create-game-form/`, `admin/` — question bank CRUD +
+import, `room/` — waiting room plus `match-play/`, `match-results/`, and `chat/` sub-components, all
+keyed by room id, `tournaments/` — now just `tournament-detail/`, keyed by tournament id). i18n via
 Transloco, **not** Angular's built-in i18n (needed for runtime language switching without separate
 builds) — Spanish is the default/fallback locale, translation files are
 `frontend/public/i18n/{es,en}.json`. Test runner is **Vitest** (`@angular/build:unit-test`), not
 Karma/Jasmine — this Angular version (22) made Karma a deprecated, webpack-based path.
+
+### Shared UI building blocks + the dark game-lobby visual language
+
+`frontend/src/app/shared/` holds three small, reusable standalone components pulled out during a
+UX-polish pass: `LoadingSkeleton` (shimmering placeholder rows — `[rows]`/`[height]` inputs),
+`EmptyState` (icon + message panel, `<ng-content>` slot for an optional action), and `ErrorBanner`
+(icon + message, optional `[dismissible]`). These replace the old ad hoc `<p class="loading-text">`
+/`<p class="empty-state">`/`<p class="error">` scattered per-feature — reach for them first before
+writing a new bespoke loading/empty/error treatment.
+
+The whole app runs a dark "arcade lobby" visual theme (`styles.scss` tokens: `--color-bg-deep`,
+`--color-surface`/`--color-surface-elevated`, `--color-primary` (violet), `--color-cta` (green,
+"go/join" actions), `--color-gold` (create/champion accents), `--font-display` (Rajdhani, headings/
+labels/buttons) vs. `--font-body` (Inter, readable content like quiz option text) — loaded via
+Google Fonts in `index.html`). Panels consistently use a `linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%)`
+background + `1px solid var(--color-border)` + `box-shadow: var(--shadow-panel)`; buttons are
+glossy/3D by default (global `button` rule in `styles.scss`) with `.secondary` as the flat/outlined
+variant. `.status-dot`/`.icon` are global utility classes (glow indicator, inline-SVG icon sizing)
+reused across the lobby, tournaments, and room pages rather than redeclared per component — small
+inline `<svg>` icons are used throughout instead of emoji or an icon-font dependency, consistent
+with the app's zero-dependency convention.
+
+Two small live-data animations worth knowing about if you touch match UI: `match-play`'s countdown
+number and the "time low" (`≤5s`) state both use the global `pulse-glow` keyframe; `CompetitorsPanel`
+tracks each competitor's previous score in a plain `Map` (not a signal — it's write-only bookkeeping,
+never read reactively) inside a constructor `effect()`, and briefly adds a `.bump` class (global
+`value-bump` keyframe) whenever a score increases, auto-clearing after 700ms via the same
+timer-per-id pattern the reaction-burst code already used. This is a highlight/flash, deliberately
+**not** a numeric count-up animation — added scope that wasn't worth the extra complexity for a quiz
+score that jumps in coarse increments.
 
 ### JSON enum handling gotcha
 

@@ -269,6 +269,8 @@ public class TournamentService(
                 SecondsPerQuestion = tournament.SecondsPerQuestion,
                 IsPrivate = false,
                 Status = RoomStatus.Waiting,
+                // Kind intentionally left at its Multiplayer default — a tournament round room
+                // always has 2+ players (RoomSize), never a solitary practice room.
                 HostUserId = group[0],
                 GameMode = tournament.GameMode,
                 CreatedAt = DateTimeOffset.UtcNow

@@ -13,6 +13,7 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
         builder.Property(r => r.Name).IsRequired().HasMaxLength(40);
         builder.Property(r => r.Topic).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(r => r.Kind).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.GameMode).IsRequired().HasMaxLength(30);
         builder.Property(r => r.ShareCode).HasMaxLength(6);
 

@@ -3,9 +3,10 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../../../core/services/auth.service';
+import { ErrorBanner } from '../../../shared/error-banner/error-banner';
 
 @Component({
-  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoPipe, ErrorBanner],
   selector: 'app-login',
   styleUrl: './login.scss',
   templateUrl: './login.html'

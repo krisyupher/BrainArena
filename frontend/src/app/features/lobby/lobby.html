@@ -1,8 +1,14 @@
 <div class="lobby-page">
   <div class="lobby-header">
-    <h1>{{ 'lobby.title' | transloco }}</h1>
+    <div class="lobby-heading">
+      <span class="lobby-eyebrow">{{ 'lobby.eyebrow' | transloco }}</span>
+      <h1>{{ 'lobby.title' | transloco }}</h1>
+    </div>
     @if (auth.isAuthenticated()) {
-      <button type="button" (click)="showCreateForm.set(!showCreateForm())">
+      <button type="button" class="btn-create" (click)="showCreateForm.set(!showCreateForm())">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
         {{ 'lobby.createRoom' | transloco }}
       </button>
     } @else {
@@ -11,47 +17,172 @@
   </div>
 
   @if (showCreateForm()) {
-    <app-create-room-form
-      (created)="onRoomCreated($event)"
+    <app-create-game-form
+      [initialKind]="activeTab()"
+      (roomCreated)="onRoomCreated($event)"
+      (solitaryStarted)="onSolitaryStarted($event)"
+      (tournamentCreated)="onTournamentCreated($event)"
       (cancelled)="showCreateForm.set(false)"
     />
   }
 
-  @if (loading()) {
+  <div class="tab-switch">
+    <button type="button" [class.active]="activeTab() === 'multiplayer'" (click)="setTab('multiplayer')">
+      {{ 'lobby.tabs.multiplayer' | transloco }}
+    </button>
+    <button type="button" [class.active]="activeTab() === 'tournament'" (click)="setTab('tournament')">
+      {{ 'lobby.tabs.tournament' | transloco }}
+    </button>
+    <button type="button" [class.active]="activeTab() === 'solitary'" (click)="setTab('solitary')">
+      {{ 'lobby.tabs.solitary' | transloco }}
+    </button>
+  </div>
+
+  @if (activeTab() === 'solitary') {
+    <app-empty-state [message]="'lobby.practiceCta' | transloco">
+      @if (auth.isAuthenticated()) {
+        <button type="button" class="btn-create" (click)="showCreateForm.set(true)">
+          {{ 'lobby.practiceNow' | transloco }}
+        </button>
+      } @else {
+        <a class="login-cta" routerLink="/login">{{ 'lobby.loginToPlay' | transloco }}</a>
+      }
+    </app-empty-state>
+  } @else if (loading()) {
     <ul class="room-list">
       @for (i of [1, 2, 3]; track i) {
         <li class="room-card skeleton"></li>
       }
     </ul>
-  } @else if (rooms().length === 0) {
-    <p class="empty-state">{{ 'lobby.noRooms' | transloco }}</p>
-  } @else {
-    <ul class="room-list">
-      @for (room of rooms(); track room.id) {
-        <li class="room-card">
-          <div class="room-info">
+  } @else if (activeTab() === 'multiplayer') {
+    @if (multiplayerRooms.length === 0) {
+      <p class="empty-state">{{ 'lobby.noRooms' | transloco }}</p>
+    } @else {
+      <ul class="room-list">
+        @for (room of multiplayerRooms; track room.id) {
+          <li class="room-card">
+            <div class="room-card-top">
+              <span class="room-status status-dot" [class]="'status-' + room.status">
+                {{ 'lobby.status.' + room.status | transloco }}
+              </span>
+              <span class="room-mode-badge">{{ 'createRoom.gameModeOption.' + room.gameMode | transloco }}</span>
+            </div>
+
             <span class="room-name">{{ room.name }}</span>
-            <span class="room-topic">{{ 'lobby.topic.' + room.topic | transloco }}</span>
-            <span class="room-status" [class]="'status-' + room.status">
-              {{ 'lobby.status.' + room.status | transloco }}
-            </span>
-          </div>
-          <div class="room-meta">
-            <span class="room-count">{{ 'lobby.players' | transloco }}: {{ room.playerCount }}/{{ room.maxPlayers }}</span>
+            @if (room.gameMode === 'multiple-choice') {
+              <span class="room-topic">{{ 'lobby.topic.' + room.topic | transloco }}</span>
+            }
+
+            <div class="room-facts">
+              <span class="room-fact">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M17 20v-1a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v1"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M16 3.2a3 3 0 0 1 0 5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  <path
+                    d="M20.5 20v-1a3.5 3.5 0 0 0-2.5-3.35"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                {{ room.playerCount }}/{{ room.maxPlayers }}
+              </span>
+              <span class="room-fact">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                  <path
+                    d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.33c-.7.28-1.4.87-1.4 1.67v.3"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="12" cy="16.5" r="0.9" fill="currentColor" />
+                </svg>
+                {{ room.questionCount }}
+              </span>
+              <span class="room-fact">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
+                  <path
+                    d="M12 7v5l3.5 2"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                {{ room.secondsPerQuestion }}s
+              </span>
+            </div>
+
             @if (auth.isAuthenticated()) {
               <button
                 type="button"
+                class="btn-join"
                 [disabled]="room.status !== 'Waiting' || room.playerCount >= room.maxPlayers"
                 (click)="join(room)"
               >
                 {{ 'lobby.join' | transloco }}
               </button>
             } @else {
-              <a class="secondary" [routerLink]="['/rooms', room.id]">{{ 'lobby.watch' | transloco }}</a>
+              <a class="btn-join btn-join-ghost" [routerLink]="['/rooms', room.id]">
+                {{ 'lobby.watch' | transloco }}
+              </a>
             }
-          </div>
-        </li>
-      }
-    </ul>
+          </li>
+        }
+      </ul>
+    }
+  } @else if (activeTab() === 'tournament') {
+    @if (tournaments().length === 0) {
+      <p class="empty-state">{{ 'lobby.noTournaments' | transloco }}</p>
+    } @else {
+      <ul class="room-list">
+        @for (tournament of tournaments(); track tournament.id) {
+          <li class="room-card">
+            <div class="room-card-top">
+              <span class="room-status status-dot" [class]="'status-' + tournament.status">
+                {{ 'lobby.status.' + tournament.status | transloco }}
+              </span>
+              <span class="room-mode-badge">{{ 'createRoom.gameModeOption.' + tournament.gameMode | transloco }}</span>
+            </div>
+
+            <span class="room-name">{{ tournament.name }}</span>
+
+            <div class="room-facts">
+              <span class="room-fact">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M17 20v-1a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v1"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M16 3.2a3 3 0 0 1 0 5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  <path
+                    d="M20.5 20v-1a3.5 3.5 0 0 0-2.5-3.35"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                {{ tournament.playerCount }}/{{ tournament.tournamentSize }}
+              </span>
+            </div>
+
+            <a class="btn-join btn-join-ghost" [routerLink]="['/tournaments', tournament.id]">
+              {{ 'tournaments.view' | transloco }}
+            </a>
+          </li>
+        }
+      </ul>
+    }
   }
 </div>

@@ -1,9 +1,10 @@
 import { Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { QuestionRevealedEvent, QuestionStartedEvent } from '../../../../core/models/match.model';
+import { ErrorBanner } from '../../../../shared/error-banner/error-banner';
 
 @Component({
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, ErrorBanner],
   selector: 'app-multiple-choice-panel',
   styleUrl: './multiple-choice-panel.scss',
   templateUrl: './multiple-choice-panel.html'

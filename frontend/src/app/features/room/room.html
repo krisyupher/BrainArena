@@ -1,6 +1,7 @@
 @if (room(); as r) {
   <div class="page-with-sidebar">
     <div class="room-page">
+      <span class="room-eyebrow">{{ 'room.eyebrow' | transloco }}</span>
       <h1>{{ r.name }}</h1>
       <p class="room-topic">{{ 'lobby.topic.' + r.topic | transloco }}</p>
 
@@ -10,8 +11,8 @@
 
       <p class="player-count">{{ 'lobby.players' | transloco }}: {{ r.players.length }}/{{ r.maxPlayers }}</p>
 
-      @if (errorMessage()) {
-        <p class="error">{{ errorMessage() }}</p>
+      @if (errorMessage(); as msg) {
+        <app-error-banner [message]="msg" />
       }
 
       @if (isHost) {
@@ -19,7 +20,7 @@
           {{ 'room.startNow' | transloco }}
         </button>
       } @else if (isParticipant) {
-        <p class="waiting-text">{{ 'room.waitingForHost' | transloco }}</p>
+        <p class="waiting-text status-dot">{{ 'room.waitingForHost' | transloco }}</p>
       } @else {
         <p class="spectator-cta">
           {{ 'room.spectating' | transloco }}

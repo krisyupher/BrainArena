@@ -1,4 +1,5 @@
 using BrainArena.Application.Common;
+using BrainArena.Domain.Enums;
 
 namespace BrainArena.Application.Rooms;
 
@@ -24,14 +25,21 @@ public static class RoomValidation
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length is < 3 or > 40)
             throw new AppException("Room name must be between 3 and 40 characters.");
 
-        if (request.MaxPlayers is < MinPlayersLimit or > MaxPlayersLimit)
-            throw new AppException($"Max players must be between {MinPlayersLimit} and {MaxPlayersLimit}.");
+        // A solitary practice room is always exactly 1/1 — RoomService forces MaxPlayers/
+        // MinPlayersToStart to 1 server-side regardless of what's sent, so the ordinary
+        // MinPlayersLimit floor below doesn't apply to this kind. MinPlayersLimit itself must stay
+        // unchanged — TournamentValidation reuses it directly for RoomSize bounds.
+        if (request.Kind == RoomKind.Multiplayer)
+        {
+            if (request.MaxPlayers is < MinPlayersLimit or > MaxPlayersLimit)
+                throw new AppException($"Max players must be between {MinPlayersLimit} and {MaxPlayersLimit}.");
 
-        if (request.MinPlayersToStart < MinPlayersLimit)
-            throw new AppException($"Minimum players to start must be at least {MinPlayersLimit}.");
+            if (request.MinPlayersToStart < MinPlayersLimit)
+                throw new AppException($"Minimum players to start must be at least {MinPlayersLimit}.");
 
-        if (request.MinPlayersToStart > request.MaxPlayers)
-            throw new AppException("Minimum players to start cannot exceed max players.");
+            if (request.MinPlayersToStart > request.MaxPlayers)
+                throw new AppException("Minimum players to start cannot exceed max players.");
+        }
 
         if (request.QuestionCount is < MinQuestionCount or > MaxQuestionCount)
             throw new AppException($"Question count must be between {MinQuestionCount} and {MaxQuestionCount}.");

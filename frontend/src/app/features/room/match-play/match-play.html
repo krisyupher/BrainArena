@@ -10,7 +10,7 @@
     @if (phase() === 'question' && currentQuestion(); as q) {
       <div class="question-panel">
         <p class="progress">{{ 'match.questionProgress' | transloco: { index: q.index + 1, total: q.totalQuestions } }}</p>
-        <p class="time-left">{{ secondsLeft() }}s</p>
+        <p class="time-left" [class.time-low]="secondsLeft() <= 5">{{ secondsLeft() }}s</p>
         <h2>{{ q.text }}</h2>
 
         @if (q.kind === 'calculation') {

@@ -8,9 +8,10 @@ import { RoomHubService } from '../../core/services/room-hub.service';
 import { RoomDetail } from '../../core/models/room.model';
 import { Chat } from './chat/chat';
 import { CompetitorsPanel, CompetitorViewModel } from './competitors-panel/competitors-panel';
+import { ErrorBanner } from '../../shared/error-banner/error-banner';
 
 @Component({
-  imports: [TranslocoPipe, RouterLink, Chat, CompetitorsPanel],
+  imports: [TranslocoPipe, RouterLink, Chat, CompetitorsPanel, ErrorBanner],
   selector: 'app-room',
   styleUrl: './room.scss',
   templateUrl: './room.html'

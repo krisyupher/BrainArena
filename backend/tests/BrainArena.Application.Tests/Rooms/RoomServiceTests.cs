@@ -8,29 +8,30 @@ namespace BrainArena.Application.Tests.Rooms;
 
 public class RoomServiceTests
 {
-    private static CreateRoomRequest Request(int maxPlayers = 3, int minPlayersToStart = 2, bool isPrivate = false) => new(
+    private static CreateRoomRequest Request(int maxPlayers = 3, int minPlayersToStart = 2, bool isPrivate = false, RoomKind kind = RoomKind.Multiplayer) => new(
         Name: "Geo Trivia",
         Topic: RoomTopic.Geography,
         MaxPlayers: maxPlayers,
         MinPlayersToStart: minPlayersToStart,
         QuestionCount: 10,
         SecondsPerQuestion: 20,
-        IsPrivate: isPrivate);
+        IsPrivate: isPrivate,
+        Kind: kind);
 
-    private static (RoomService Service, FakeUserRepository Users, FakeRoomRepository Rooms, FakeRoomNotifier Notifier) BuildService()
+    private static (RoomService Service, FakeUserRepository Users, FakeRoomRepository Rooms, FakeRoomNotifier Notifier, FakeMatchOrchestrator MatchOrchestrator) BuildService()
     {
         var users = new FakeUserRepository();
         var rooms = new FakeRoomRepository();
         var notifier = new FakeRoomNotifier();
         var matchOrchestrator = new FakeMatchOrchestrator();
         var gameModeRegistry = new GameModeRegistry([new MultipleChoiceGameMode(), new CalculationGameMode()]);
-        return (new RoomService(rooms, users, notifier, matchOrchestrator, gameModeRegistry), users, rooms, notifier);
+        return (new RoomService(rooms, users, notifier, matchOrchestrator, gameModeRegistry), users, rooms, notifier, matchOrchestrator);
     }
 
     [Fact]
     public async Task CreateRoomAsync_AddsTheHostAsTheFirstPlayer()
     {
-        var (service, users, _, notifier) = BuildService();
+        var (service, users, _, notifier, _) = BuildService();
         var host = users.Seed("Host Hernandez");
 
         var room = await service.CreateRoomAsync(host.Id, Request());
@@ -44,7 +45,7 @@ public class RoomServiceTests
     [Fact]
     public async Task CreateRoomAsync_PrivateRoomGetsAShareCode()
     {
-        var (service, users, _, _) = BuildService();
+        var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
 
         var room = await service.CreateRoomAsync(host.Id, Request(isPrivate: true));
@@ -55,7 +56,7 @@ public class RoomServiceTests
     [Fact]
     public async Task JoinRoomAsync_AddsANewPlayerToAWaitingRoom()
     {
-        var (service, users, _, _) = BuildService();
+        var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
         var joiner = users.Seed();
         var room = await service.CreateRoomAsync(host.Id, Request());
@@ -69,7 +70,7 @@ public class RoomServiceTests
     [Fact]
     public async Task JoinRoomAsync_IsIdempotentForAPlayerAlreadyInTheRoom()
     {
-        var (service, users, _, _) = BuildService();
+        var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
         var room = await service.CreateRoomAsync(host.Id, Request());
 
@@ -81,7 +82,7 @@ public class RoomServiceTests
     [Fact]
     public async Task JoinRoomAsync_ThrowsWhenTheRoomIsFull()
     {
-        var (service, users, _, _) = BuildService();
+        var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
         var room = await service.CreateRoomAsync(host.Id, Request(maxPlayers: 2));
         var secondPlayer = users.Seed();
@@ -97,7 +98,7 @@ public class RoomServiceTests
     [Fact]
     public async Task GetOpenRoomsAsync_OrdersWaitingRoomsBeforeInProgressRooms()
     {
-        var (service, users, roomsRepo, _) = BuildService();
+        var (service, users, roomsRepo, _, _) = BuildService();
         var host = users.Seed();
         var waitingRoom = await service.CreateRoomAsync(host.Id, Request());
         var inProgressRoomHost = users.Seed();
@@ -113,7 +114,7 @@ public class RoomServiceTests
     [Fact]
     public async Task GetRoomByShareCodeAsync_ThrowsForAnUnknownCode()
     {
-        var (service, _, _, _) = BuildService();
+        var (service, _, _, _, _) = BuildService();
 
         var exception = await Assert.ThrowsAsync<AppException>(
             () => service.GetRoomByShareCodeAsync("ZZZZZZ"));
@@ -124,7 +125,7 @@ public class RoomServiceTests
     [Fact]
     public async Task LeaveRoomAsync_NonHostLeaving_RemovesThemWithoutChangingHost()
     {
-        var (service, users, _, _) = BuildService();
+        var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
         var other = users.Seed();
         var room = await service.CreateRoomAsync(host.Id, Request());
@@ -140,7 +141,7 @@ public class RoomServiceTests
     [Fact]
     public async Task LeaveRoomAsync_HostLeaving_PassesHostToTheEarliestRemainingPlayer()
     {
-        var (service, users, _, _) = BuildService();
+        var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
         var second = users.Seed();
         var third = users.Seed();
@@ -158,7 +159,7 @@ public class RoomServiceTests
     [Fact]
     public async Task LeaveRoomAsync_OnceTheRoomHasStarted_DoesNothing()
     {
-        var (service, users, roomsRepo, _) = BuildService();
+        var (service, users, roomsRepo, _, _) = BuildService();
         var host = users.Seed();
         var second = users.Seed();
         var room = await service.CreateRoomAsync(host.Id, Request());
@@ -169,5 +170,45 @@ public class RoomServiceTests
 
         var updated = await service.GetRoomDetailAsync(room.Id);
         Assert.Equal(2, updated.Players.Count);
+    }
+
+    [Fact]
+    public async Task CreateRoomAsync_ForASolitaryRoom_ForcesOnePlayerAndNeverPrivate()
+    {
+        var (service, users, _, _, _) = BuildService();
+        var host = users.Seed();
+
+        // A crafted payload trying to smuggle a many-player/private "solitary" room through.
+        var room = await service.CreateRoomAsync(
+            host.Id, Request(maxPlayers: 8, minPlayersToStart: 4, isPrivate: true, kind: RoomKind.Solitary));
+
+        Assert.Equal(1, room.MaxPlayers);
+        Assert.Equal(1, room.MinPlayersToStart);
+        Assert.False(room.IsPrivate);
+        Assert.Null(room.ShareCode);
+        Assert.Equal(RoomKind.Solitary, room.Kind);
+    }
+
+    [Fact]
+    public async Task CreateRoomAsync_ForASolitaryRoom_AttemptsAutoStart()
+    {
+        var (service, users, _, _, matchOrchestrator) = BuildService();
+        var host = users.Seed();
+
+        var room = await service.CreateRoomAsync(host.Id, Request(kind: RoomKind.Solitary));
+
+        Assert.Equal(1, matchOrchestrator.AutoStartAttempts);
+        Assert.Equal(room.Id, matchOrchestrator.LastAutoStartRoomId);
+    }
+
+    [Fact]
+    public async Task CreateRoomAsync_ForAMultiplayerRoom_NeverAttemptsAutoStart()
+    {
+        var (service, users, _, _, matchOrchestrator) = BuildService();
+        var host = users.Seed();
+
+        await service.CreateRoomAsync(host.Id, Request());
+
+        Assert.Equal(0, matchOrchestrator.AutoStartAttempts);
     }
 }

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, input, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, input, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Subscription } from 'rxjs';
 import { RoomHubService } from '../../../core/services/room-hub.service';
@@ -45,6 +45,33 @@ export class CompetitorsPanel implements OnInit, OnDestroy {
   private reactionKeyCounter = 0;
   private readonly subscriptions = new Subscription();
 
+  /** Briefly highlighted score numbers — set whenever a competitor's score just went up. */
+  private readonly bumpedIds = signal<Set<string>>(new Set());
+  private readonly lastScores = new Map<string, number>();
+  private readonly bumpTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  constructor() {
+    effect(() => {
+      const bumped: string[] = [];
+      for (const c of this.competitors()) {
+        if (c.score === undefined) {
+          continue;
+        }
+        const previous = this.lastScores.get(c.userId);
+        if (previous !== undefined && c.score > previous) {
+          bumped.push(c.userId);
+        }
+        this.lastScores.set(c.userId, c.score);
+      }
+      if (bumped.length > 0) {
+        this.bumpedIds.update((set) => new Set([...set, ...bumped]));
+        for (const userId of bumped) {
+          this.scheduleBumpClear(userId);
+        }
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.subscriptions.add(
       this.roomHub.reactionSent.subscribe((event) => this.showReaction(event.targetUserId, event.emoji))
@@ -56,6 +83,29 @@ export class CompetitorsPanel implements OnInit, OnDestroy {
     for (const timer of this.clearTimers.values()) {
       clearTimeout(timer);
     }
+    for (const timer of this.bumpTimers.values()) {
+      clearTimeout(timer);
+    }
+  }
+
+  isBumped(userId: string): boolean {
+    return this.bumpedIds().has(userId);
+  }
+
+  private scheduleBumpClear(userId: string): void {
+    const existing = this.bumpTimers.get(userId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+    const timer = setTimeout(() => {
+      this.bumpedIds.update((set) => {
+        const next = new Set(set);
+        next.delete(userId);
+        return next;
+      });
+      this.bumpTimers.delete(userId);
+    }, 700);
+    this.bumpTimers.set(userId, timer);
   }
 
   togglePicker(userId: string): void {

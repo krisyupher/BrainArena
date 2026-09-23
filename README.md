@@ -2,7 +2,9 @@
 
 Real-time multiplayer quiz competitions in rooms. Angular + ASP.NET Core (SignalR) + PostgreSQL.
 
-Built in phases per the project brief — all four phases are now implemented:
+Built in phases per the project brief, then extended well past it — the original four phases are
+done, and the app has grown a second game mode, spectating, tournaments, solo practice, and a
+full visual/theming redesign on top:
 
 - **Phase 1 — accounts and lobby**: register/login (JWT), a lobby that lists open rooms live
   (via SignalR) with a "Create room" form.
@@ -13,10 +15,34 @@ Built in phases per the project brief — all four phases are now implemented:
   results screen with a per-question review.
 - **Phase 3 — question bank**: 20 original questions per topic (80 total). An admin-only page
   (`/admin`, gated by role) to add and edit questions and bulk-import them from a JSON file.
-- **Phase 4 — chat**: live text chat in the waiting room and on the results screen only (never
-  shown during match play). Server-enforced: 200-character cap, 1 message per 2 seconds per user,
-  a basic profanity filter (censors blocked words rather than rejecting the message), and a Report
-  button on every message.
+- **Phase 4 — chat**: live text chat, available on every room-lifecycle page (waiting room, match
+  play, and results) to any signed-in user — playing or just spectating. Server-enforced:
+  200-character cap, 1 message per 2 seconds per user, a basic profanity filter (censors blocked
+  words rather than rejecting the message), and a Report button on every message.
+- **Phase 5 — spectator mode**: anyone can browse the public room list and watch a live match in
+  real time (live questions, reveals, scores) without an account — only creating, joining, or
+  playing in a room needs one. Private rooms stay fully gated either way.
+- **Phase 6 — calculation mode**: a second, pluggable game mode alongside multiple-choice —
+  procedurally generated arithmetic problems (no admin authoring needed), scored on the same
+  100-points-plus-speed-bonus curve.
+- **Phase 7 — right-rail layout**: a persistent competitors panel (live scores, connection status)
+  and chat sit side by side with the match itself, on a shared two-column layout used by the
+  waiting room and match play alike.
+- **Phase 8 — reactions**: a small emoji set sendable at any competitor from the competitors panel,
+  with a lightweight floating animation. (Real camera/mic video chat was scoped out as a separate
+  future initiative — see Known limitations.)
+- **Phase 9 — mini-tournaments**: elimination brackets built on top of ordinary rooms — join a
+  tournament's waiting pool, and once it's full each round splits players into rooms that play a
+  completely normal match; the top finishers from each room advance until a single champion remains.
+- **Phase 10 — visual redesign**: a dark, premium "game lobby" look (gradient panels, glowing status
+  indicators, glossy buttons, condensed display type) replacing the original plain UI, plus shared
+  loading/empty/error-state components used consistently across the app.
+- **Phase 11 — unified play flow**: one "Create room" form covers three kinds of game — regular
+  multiplayer rooms, mini-tournaments, and solitary practice rooms (single-player, starts
+  instantly, no waiting room) — and everything browsable (rooms and tournaments) lives on one
+  tabbed lobby page. Room/tournament names are auto-generated from the game mode and topic instead
+  of typed. The header collapsed into a single settings dropdown (language, light/dark theme,
+  admin link, logout), and the app now supports a light theme alongside the dark default.
 
 ## Prerequisites
 
@@ -86,8 +112,13 @@ backend/
                                     real HTTP + SignalR
 frontend/
   src/app/
-    core/        auth/admin guards, interceptor, HTTP services, the SignalR hub client, i18n loader
-    features/    auth (login/register), lobby, room (waiting room + chat, match play, results + chat), admin (question bank)
+    core/        auth/admin guards, interceptor, HTTP services, the SignalR hub client, theme
+                 service, i18n loader
+    shared/      small reusable presentational components (loading skeleton, empty state, error
+                 banner)
+    features/    auth (login/register), lobby (unified rooms/tournaments/practice browse + create),
+                 room (waiting room + chat + competitors panel, match play, results), tournaments
+                 (bracket detail view), admin (question bank)
   public/i18n/   es.json (default) and en.json translation files
 docker-compose.yml   Postgres only — backend and frontend run natively for fast reload
 ```
@@ -111,10 +142,16 @@ npm test
 
 ## Internationalization
 
-The UI defaults to Spanish with an English toggle in the header, powered by
+The UI defaults to Spanish with an English toggle inside the header's settings dropdown, powered by
 [Transloco](https://jsverse.github.io/transloco/). Translation files live in `frontend/public/i18n/`.
 
-## Notes / known limitations for this phase
+## Theming
+
+Dark is the default look; a light theme is available from the same header dropdown as the language
+toggle. On first visit the app follows the browser/OS's `prefers-color-scheme` — a manual choice
+afterward is remembered (`localStorage`) and takes over from then on.
+
+## Known limitations
 
 - Match state (current question, scores-in-progress, etc.) lives in server memory while a match is
   running, for a simple, fast implementation. Match/answer rows are persisted as the match
@@ -123,9 +160,17 @@ The UI defaults to Spanish with an English toggle in the header, powered by
 - The 5-second countdown and 5-second reveal durations are configurable (`MatchTiming` in
   `appsettings.json`) — the integration tests shorten them to keep the suite fast, while the
   per-question answer window (10-60s, a real product rule) is left untouched.
-- If a room's question count exceeds what's available for its topic (now unlikely at 20/topic, but
-  possible after heavy play or a narrow admin edit), the match fails to start with a clear in-room
-  error rather than starting broken.
+- If a room's question count exceeds what's available for its topic (multiple-choice mode only —
+  now unlikely at 20/topic, but possible after heavy play or a narrow admin edit; calculation mode
+  generates its own problems and never hits this), the match fails to start with a clear error
+  rather than starting broken. For a solitary practice room specifically, since nobody else can
+  ever join a single-player room to trigger a retry, this surfaces as a creation failure in the
+  create form itself rather than a stuck waiting room.
+- Real camera/mic video chat was scoped out as a separate future initiative — it needs its own
+  architecture decision (peer-to-peer mesh vs. a dedicated media server) before it can be built.
+  Reactions (Phase 8) ship today; live video/audio doesn't yet.
+- Solitary practice rooms are just you against the clock — there's no history of past solo
+  sessions to browse back through yet, only the option to start a new one.
 - The question bank's `Language` field (es/en) is captured per question but matches don't yet
   filter by it — question selection is topic-only. Wiring room/match language selection to it is
   natural follow-up work, not done here since the brief didn't call for a room-level language

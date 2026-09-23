@@ -16,14 +16,16 @@
 
 .calculation-reveal {
   text-align: center;
-  background: var(--color-surface);
+  background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
   border: 2px solid var(--color-success);
   border-radius: var(--radius);
   padding: 10px 16px;
   margin: var(--spacing) 0;
   font-weight: 600;
+  box-shadow: 0 0 16px rgba(46, 230, 166, 0.25);
 
   strong {
+    font-family: var(--font-display);
     color: var(--color-success);
   }
 }

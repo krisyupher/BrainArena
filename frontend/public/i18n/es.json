@@ -3,7 +3,9 @@
     "title": "BrainArena",
     "logout": "Cerrar sesión",
     "admin": "Admin",
-    "tournaments": "Torneos"
+    "settings": "Configuración",
+    "themeLight": "Cambiar a modo claro",
+    "themeDark": "Cambiar a modo oscuro"
   },
   "auth": {
     "login": {
@@ -28,13 +30,23 @@
     }
   },
   "lobby": {
+    "eyebrow": "Lobby multijugador",
     "title": "Salas",
     "createRoom": "Crear sala",
     "noRooms": "No hay salas activas todavía. ¡Crea la primera!",
+    "noTournaments": "No hay torneos abiertos todavía. ¡Crea el primero!",
+    "practiceCta": "Juega en solitario contra el reloj — sin esperas, sin rivales, solo tú y las preguntas.",
+    "practiceNow": "Practicar ahora",
     "join": "Unirse",
     "watch": "Ver",
     "loginToPlay": "Inicia sesión para crear o unirte a una sala",
     "players": "Jugadores",
+    "questionsInfo": "{{count}} preguntas · {{seconds}}s cada una",
+    "tabs": {
+      "solitary": "Solitario",
+      "multiplayer": "Multijugador",
+      "tournament": "Torneo"
+    },
     "status": {
       "Waiting": "Esperando",
       "InProgress": "En curso",
@@ -49,7 +61,14 @@
   },
   "createRoom": {
     "title": "Crear sala",
-    "name": "Nombre de la sala",
+    "kind": "Tipo",
+    "kindOption": {
+      "solitary": "Solitario",
+      "multiplayer": "Multijugador",
+      "tournament": "Torneo"
+    },
+    "practicePrefix": "Práctica",
+    "tournamentPrefix": "Torneo",
     "gameMode": "Modo de juego",
     "gameModeOption": {
       "multiple-choice": "Opción múltiple",
@@ -63,9 +82,11 @@
     "isPrivate": "Sala privada",
     "submit": "Crear",
     "cancel": "Cancelar",
-    "shareCodeCreated": "Sala privada creada. Código para compartir:"
+    "shareCodeCreated": "Sala privada creada. Código para compartir:",
+    "solitaryStartFailed": "No se pudo iniciar tu práctica — todavía no hay suficientes preguntas para este tema. Prueba otro tema o modo."
   },
   "room": {
+    "eyebrow": "Sala de espera",
     "host": "Anfitrión",
     "shareCode": "Código para compartir",
     "startNow": "Iniciar ahora",
@@ -77,6 +98,7 @@
     "signUpToPlay": "Regístrate o inicia sesión para jugar"
   },
   "match": {
+    "eyebrow": "Partida finalizada",
     "getReady": "¡Prepárate! La partida comienza en...",
     "questionProgress": "Pregunta {{index}} de {{total}}",
     "reviewing": "Revisión de la pregunta",
@@ -92,6 +114,7 @@
     "correctAnswerWas": "La respuesta correcta era"
   },
   "admin": {
+    "eyebrow": "Panel de administración",
     "title": "Banco de preguntas",
     "addQuestion": "Agregar pregunta",
     "editQuestion": "Editar pregunta",
@@ -123,9 +146,9 @@
     "signUpToChat": "Regístrate para enviar mensajes"
   },
   "tournaments": {
+    "eyebrow": "Modo eliminatorio",
     "title": "Torneos",
     "createTournament": "Crear torneo",
-    "noTournaments": "No hay torneos abiertos todavía. ¡Crea el primero!",
     "view": "Ver",
     "back": "Volver a los torneos",
     "tournamentSize": "Tamaño del torneo",

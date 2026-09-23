@@ -1,9 +1,10 @@
 .question-form {
-  background: var(--color-surface);
+  background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: var(--spacing);
   margin-bottom: var(--spacing);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-panel);
 }
 
 .row {
@@ -19,11 +20,17 @@ textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   font: inherit;
   resize: vertical;
-  background: var(--color-surface);
+  background: var(--input-bg);
   color: var(--color-text);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(124, 107, 255, 0.25);
+  }
 }
 
 .options-hint {
@@ -54,11 +61,5 @@ textarea {
 
   button {
     flex: 1;
-  }
-
-  .secondary {
-    background: transparent;
-    color: var(--color-muted);
-    border: 1px solid var(--color-border);
   }
 }

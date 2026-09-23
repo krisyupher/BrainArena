@@ -11,16 +11,21 @@ public record CreateRoomRequest(
     int QuestionCount,
     int SecondsPerQuestion,
     bool IsPrivate,
-    string GameMode = MultipleChoiceGameMode.Key);
+    string GameMode = MultipleChoiceGameMode.Key,
+    RoomKind Kind = RoomKind.Multiplayer);
 
 public record RoomSummaryDto(
     Guid Id,
     string Name,
     RoomTopic Topic,
+    string GameMode,
+    int QuestionCount,
+    int SecondsPerQuestion,
     int PlayerCount,
     int MaxPlayers,
     RoomStatus Status,
-    bool IsPrivate);
+    bool IsPrivate,
+    RoomKind Kind);
 
 public record RoomPlayerDto(Guid UserId, string DisplayName);
 
@@ -36,4 +41,5 @@ public record RoomDetailDto(
     string? ShareCode,
     RoomStatus Status,
     Guid HostUserId,
+    RoomKind Kind,
     IReadOnlyList<RoomPlayerDto> Players);

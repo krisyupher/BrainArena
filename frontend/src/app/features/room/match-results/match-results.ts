@@ -6,9 +6,10 @@ import { RoomService } from '../../../core/services/room.service';
 import { RoomHubService } from '../../../core/services/room-hub.service';
 import { MatchResultsDto } from '../../../core/models/match.model';
 import { Chat } from '../chat/chat';
+import { LoadingSkeleton } from '../../../shared/loading-skeleton/loading-skeleton';
 
 @Component({
-  imports: [TranslocoPipe, RouterLink, Chat],
+  imports: [TranslocoPipe, RouterLink, Chat, LoadingSkeleton],
   selector: 'app-match-results',
   styleUrl: './match-results.scss',
   templateUrl: './match-results.html'

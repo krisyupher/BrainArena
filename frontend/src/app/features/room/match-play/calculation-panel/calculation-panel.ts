@@ -2,9 +2,10 @@ import { Component, effect, input, output } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { QuestionRevealedEvent, QuestionStartedEvent } from '../../../../core/models/match.model';
+import { ErrorBanner } from '../../../../shared/error-banner/error-banner';
 
 @Component({
-  imports: [ReactiveFormsModule, TranslocoPipe],
+  imports: [ReactiveFormsModule, TranslocoPipe, ErrorBanner],
   selector: 'app-calculation-panel',
   styleUrl: './calculation-panel.scss',
   templateUrl: './calculation-panel.html'

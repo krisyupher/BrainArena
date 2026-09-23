@@ -18,10 +18,11 @@
 }
 
 .tournament-status {
+  font-family: var(--font-display);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   margin-bottom: var(--spacing);
 
   &.status-Waiting {
@@ -29,28 +30,42 @@
   }
 
   &.status-InProgress {
-    color: var(--color-primary);
+    color: #67b7ff;
   }
 }
 
 .champion-banner {
-  background: var(--color-surface);
+  background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  border: 1px solid rgba(255, 207, 77, 0.4);
   border-radius: var(--radius);
   padding: 16px;
   text-align: center;
   font-size: 1.1rem;
   margin-bottom: var(--spacing);
+  box-shadow: var(--shadow-panel);
 }
 
 .active-room-cta {
   display: block;
   text-align: center;
-  background: var(--color-primary);
-  color: #fff;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, var(--color-cta) 0%, var(--color-cta-dark) 100%);
+  color: #04120c;
   border-radius: var(--radius);
-  padding: 12px;
-  font-weight: 600;
+  padding: 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
   margin-bottom: var(--spacing);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.35) inset,
+    0 4px 18px rgba(46, 230, 166, 0.3);
+  transition: transform var(--transition-fast);
+
+  &:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .players-section,
@@ -68,7 +83,8 @@
   gap: 6px;
 
   li {
-    background: var(--color-surface);
+    background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius);
     padding: 8px 12px;
   }
@@ -109,7 +125,8 @@
 }
 
 .round-room {
-  background: var(--color-surface);
+  background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 8px 12px;
 

@@ -1,0 +1,15 @@
+<div class="error-banner" role="alert">
+  <svg class="error-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M12 9v4M12 16.5v.01M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.3 2.25h17.76a1.5 1.5 0 0 0 1.3-2.25L13.71 3.86a1.5 1.5 0 0 0-2.42 0Z"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+  </svg>
+  <span class="error-message">{{ message() }}</span>
+  @if (dismissible()) {
+    <button type="button" class="dismiss-btn" (click)="dismissed.emit()" aria-label="Dismiss">✕</button>
+  }
+</div>

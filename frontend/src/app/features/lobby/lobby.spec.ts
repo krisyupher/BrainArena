@@ -24,6 +24,7 @@ describe('Lobby', () => {
           provide: RoomHubService,
           useValue: {
             roomListChanged: new Subject<void>(),
+            tournamentListChanged: new Subject<void>(),
             connect: () => Promise.resolve(),
             disconnect: () => Promise.resolve()
           }
@@ -42,6 +43,7 @@ describe('Lobby', () => {
   it('should create and load the open room list', () => {
     expect(component).toBeTruthy();
     httpMock.expectOne('/api/rooms').flush([]);
+    httpMock.expectOne('/api/tournaments').flush([]);
     expect(component.loading()).toBe(false);
   });
 });

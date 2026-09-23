@@ -1,0 +1,81 @@
+.create-room-card {
+  background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: calc(var(--spacing) * 1.25);
+  margin-bottom: calc(var(--spacing) * 1.5);
+  box-shadow: var(--shadow-panel);
+
+  h2 {
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text);
+  }
+}
+
+.kind-switch {
+  display: flex;
+  gap: 6px;
+  margin-bottom: var(--spacing);
+
+  button {
+    flex: 1;
+    padding: 8px 6px;
+    font-size: 0.75rem;
+    background: transparent;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      transform: none;
+      filter: none;
+      border-color: var(--color-border-strong);
+      color: var(--color-text);
+    }
+
+    &.active {
+      background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+      color: var(--color-primary-contrast);
+      border-color: var(--color-primary-dark);
+    }
+  }
+}
+
+.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    width: auto;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+
+  button {
+    flex: 1;
+  }
+}
+
+.share-code-panel {
+  text-align: center;
+
+  .share-code {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--color-primary);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--color-primary) 50%, transparent);
+    margin: var(--spacing) 0;
+  }
+
+  button {
+    width: 100%;
+  }
+}

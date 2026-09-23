@@ -1,6 +1,9 @@
 <div class="admin-page">
   <div class="admin-header">
-    <h1>{{ 'admin.title' | transloco }}</h1>
+    <div class="admin-heading">
+      <span class="admin-eyebrow">{{ 'admin.eyebrow' | transloco }}</span>
+      <h1>{{ 'admin.title' | transloco }}</h1>
+    </div>
     <button type="button" (click)="openCreateForm()">{{ 'admin.addQuestion' | transloco }}</button>
   </div>
 
@@ -18,7 +21,7 @@
       </p>
     }
     @if (importError()) {
-      <p class="error">{{ 'admin.importError' | transloco }}</p>
+      <app-error-banner [message]="'admin.importError' | transloco" />
     }
   </div>
 
@@ -38,9 +41,9 @@
   </div>
 
   @if (loading()) {
-    <p class="loading-text">{{ 'admin.loading' | transloco }}</p>
+    <app-loading-skeleton [rows]="4" height="86px" />
   } @else if (questions().length === 0) {
-    <p class="empty-state">{{ 'admin.noQuestions' | transloco }}</p>
+    <app-empty-state [message]="'admin.noQuestions' | transloco" />
   } @else {
     <ul class="question-list">
       @for (q of questions(); track q.id) {

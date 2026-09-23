@@ -9,10 +9,17 @@
     <form [formGroup]="form" (ngSubmit)="submit()">
       <h2>{{ 'createRoom.title' | transloco }}</h2>
 
-      <label>
-        {{ 'createRoom.name' | transloco }}
-        <input type="text" formControlName="name" />
-      </label>
+      <div class="kind-switch">
+        @for (kind of kinds; track kind) {
+          <button
+            type="button"
+            [class.active]="form.controls.kind.value === kind"
+            (click)="setKind(kind)"
+          >
+            {{ 'createRoom.kindOption.' + kind | transloco }}
+          </button>
+        }
+      </div>
 
       <label>
         {{ 'createRoom.gameMode' | transloco }}
@@ -34,15 +41,39 @@
         </label>
       }
 
-      <label>
-        {{ 'createRoom.maxPlayers' | transloco }}
-        <input type="number" formControlName="maxPlayers" min="2" max="10" />
-      </label>
+      @if (form.controls.kind.value === 'multiplayer') {
+        <label>
+          {{ 'createRoom.maxPlayers' | transloco }}
+          <input type="number" formControlName="maxPlayers" min="2" max="10" />
+        </label>
 
-      <label>
-        {{ 'createRoom.minPlayersToStart' | transloco }}
-        <input type="number" formControlName="minPlayersToStart" min="2" />
-      </label>
+        <label>
+          {{ 'createRoom.minPlayersToStart' | transloco }}
+          <input type="number" formControlName="minPlayersToStart" min="2" />
+        </label>
+      }
+
+      @if (form.controls.kind.value === 'tournament') {
+        <label>
+          {{ 'tournaments.tournamentSize' | transloco }}
+          <input type="number" formControlName="tournamentSize" min="4" max="64" />
+        </label>
+
+        <label>
+          {{ 'tournaments.roomSize' | transloco }}
+          <input type="number" formControlName="roomSize" min="2" max="10" />
+        </label>
+
+        <label>
+          {{ 'tournaments.advancesPerRoom' | transloco }}
+          <input type="number" formControlName="advancesPerRoom" min="1" />
+        </label>
+
+        <label>
+          {{ 'createRoom.minPlayersToStart' | transloco }}
+          <input type="number" formControlName="minPlayersToStart" min="2" />
+        </label>
+      }
 
       <label>
         {{ 'createRoom.questionCount' | transloco }}
@@ -54,10 +85,12 @@
         <input type="number" formControlName="secondsPerQuestion" min="10" max="60" />
       </label>
 
-      <label class="checkbox-label">
-        <input type="checkbox" formControlName="isPrivate" />
-        {{ 'createRoom.isPrivate' | transloco }}
-      </label>
+      @if (form.controls.kind.value === 'multiplayer') {
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="isPrivate" />
+          {{ 'createRoom.isPrivate' | transloco }}
+        </label>
+      }
 
       @if (errorMessage()) {
         <p class="error">{{ errorMessage() }}</p>

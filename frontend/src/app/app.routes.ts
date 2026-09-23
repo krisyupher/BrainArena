@@ -34,11 +34,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/room/match-results/match-results').then((m) => m.MatchResults)
   },
   {
-    // Browsable without an account, same rule as the room lobby — joining/starting still needs login.
-    path: 'tournaments',
-    loadComponent: () => import('./features/tournaments/tournament-lobby/tournament-lobby').then((m) => m.TournamentLobby)
-  },
-  {
     path: 'tournaments/:id',
     loadComponent: () =>
       import('./features/tournaments/tournament-detail/tournament-detail').then((m) => m.TournamentDetail)

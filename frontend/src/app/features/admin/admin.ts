@@ -4,9 +4,12 @@ import { QuestionService } from '../../core/services/question.service';
 import { QuestionDto, QuestionImportResult, QuestionUpsertRequest } from '../../core/models/question.model';
 import { ROOM_TOPICS, RoomTopic } from '../../core/models/room.model';
 import { QuestionForm } from './question-form/question-form';
+import { LoadingSkeleton } from '../../shared/loading-skeleton/loading-skeleton';
+import { EmptyState } from '../../shared/empty-state/empty-state';
+import { ErrorBanner } from '../../shared/error-banner/error-banner';
 
 @Component({
-  imports: [TranslocoPipe, QuestionForm],
+  imports: [TranslocoPipe, QuestionForm, LoadingSkeleton, EmptyState, ErrorBanner],
   selector: 'app-admin',
   styleUrl: './admin.scss',
   templateUrl: './admin.html'

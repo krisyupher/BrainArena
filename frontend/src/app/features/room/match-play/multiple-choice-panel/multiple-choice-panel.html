@@ -14,8 +14,8 @@
       }
     </div>
 
-    @if (errorMessage()) {
-      <p class="error">{{ errorMessage() }}</p>
+    @if (errorMessage(); as msg) {
+      <app-error-banner [message]="msg" />
     }
   } @else {
     <div class="options">

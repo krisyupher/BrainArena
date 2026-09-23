@@ -1,5 +1,6 @@
 <div class="auth-page">
   <form class="auth-card" [formGroup]="form" (ngSubmit)="submit()">
+    <span class="form-eyebrow">{{ 'app.title' | transloco }}</span>
     <h1>{{ 'auth.login.title' | transloco }}</h1>
 
     <label>
@@ -12,8 +13,8 @@
       <input type="password" formControlName="password" autocomplete="current-password" />
     </label>
 
-    @if (errorMessage()) {
-      <p class="error">{{ errorMessage() }}</p>
+    @if (errorMessage(); as msg) {
+      <app-error-banner [message]="msg" />
     }
 
     <button type="submit" [disabled]="form.invalid || submitting()">

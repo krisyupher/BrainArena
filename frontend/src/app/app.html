@@ -1,33 +1,81 @@
 <header class="app-header">
-  <span class="app-title">{{ 'app.title' | transloco }}</span>
+  <a routerLink="/" class="brand">
+    <svg class="brand-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 2 21 7V17L12 22 3 17V7L12 2Z"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linejoin="round"
+      />
+      <path d="M12 2V22M3 7 21 17M21 7 3 17" stroke="currentColor" stroke-width="0.75" opacity="0.5" />
+    </svg>
+    <span class="app-title">{{ 'app.title' | transloco }}</span>
+  </a>
 
   <div class="app-header-actions">
-    <a routerLink="/tournaments">{{ 'app.tournaments' | transloco }}</a>
-
-    <div class="lang-switch">
-      <button
-        type="button"
-        [class.active]="activeLang() === 'es'"
-        (click)="setLang('es')"
-      >
-        ES
-      </button>
-      <button
-        type="button"
-        [class.active]="activeLang() === 'en'"
-        (click)="setLang('en')"
-      >
-        EN
-      </button>
-    </div>
-
-    @if (auth.isAuthenticated()) {
-      @if (auth.isAdmin()) {
-        <a routerLink="/admin">{{ 'app.admin' | transloco }}</a>
+    <div class="settings-menu">
+      @if (auth.isAuthenticated()) {
+        <button type="button" class="player-chip" (click)="toggleDropdown()">
+          <span class="player-avatar">{{ auth.currentUser()?.displayName?.charAt(0) }}</span>
+          <span class="display-name">{{ auth.currentUser()?.displayName }}</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      } @else {
+        <button type="button" class="settings-trigger" [attr.aria-label]="'app.settings' | transloco" (click)="toggleDropdown()">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6" />
+            <path
+              d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.6h-4l-.4 2.4a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 1.7 1l.4 2.4h4l.4-2.4a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z"
+              stroke="currentColor"
+              stroke-width="1.3"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
       }
-      <span class="display-name">{{ auth.currentUser()?.displayName }}</span>
-      <button type="button" (click)="logout()">{{ 'app.logout' | transloco }}</button>
-    }
+
+      @if (dropdownOpen()) {
+        <div class="settings-dropdown">
+          <div class="lang-switch">
+            <button
+              type="button"
+              [class.active]="activeLang() === 'es'"
+              (click)="setLang('es')"
+            >
+              ES
+            </button>
+            <button
+              type="button"
+              [class.active]="activeLang() === 'en'"
+              (click)="setLang('en')"
+            >
+              EN
+            </button>
+          </div>
+
+          <button type="button" class="dropdown-item" (click)="toggleTheme()">
+            @if (theme.theme() === 'dark') {
+              {{ 'app.themeLight' | transloco }}
+            } @else {
+              {{ 'app.themeDark' | transloco }}
+            }
+          </button>
+
+          @if (auth.isAuthenticated()) {
+            @if (auth.isAdmin()) {
+              <a routerLink="/admin" class="dropdown-item" (click)="dropdownOpen.set(false)">
+                {{ 'app.admin' | transloco }}
+              </a>
+            }
+            <button type="button" class="dropdown-item logout-item" (click)="logout()">
+              {{ 'app.logout' | transloco }}
+            </button>
+          }
+        </div>
+      }
+    </div>
   </div>
 </header>
 

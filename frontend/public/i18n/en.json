@@ -3,7 +3,9 @@
     "title": "BrainArena",
     "logout": "Log out",
     "admin": "Admin",
-    "tournaments": "Tournaments"
+    "settings": "Settings",
+    "themeLight": "Switch to light mode",
+    "themeDark": "Switch to dark mode"
   },
   "auth": {
     "login": {
@@ -28,13 +30,23 @@
     }
   },
   "lobby": {
+    "eyebrow": "Multiplayer Lobby",
     "title": "Rooms",
     "createRoom": "Create room",
     "noRooms": "No active rooms yet. Create the first one!",
+    "noTournaments": "No open tournaments yet. Create the first one!",
+    "practiceCta": "Play solo against the clock — no waiting, no opponents, just you and the questions.",
+    "practiceNow": "Practice now",
     "join": "Join",
     "watch": "Watch",
     "loginToPlay": "Log in to create or join a room",
     "players": "Players",
+    "questionsInfo": "{{count}} questions · {{seconds}}s each",
+    "tabs": {
+      "solitary": "Solitary",
+      "multiplayer": "Multiplayer",
+      "tournament": "Tournament"
+    },
     "status": {
       "Waiting": "Waiting",
       "InProgress": "In progress",
@@ -49,7 +61,14 @@
   },
   "createRoom": {
     "title": "Create room",
-    "name": "Room name",
+    "kind": "Type",
+    "kindOption": {
+      "solitary": "Solitary",
+      "multiplayer": "Multiplayer",
+      "tournament": "Tournament"
+    },
+    "practicePrefix": "Practice",
+    "tournamentPrefix": "Tournament",
     "gameMode": "Game mode",
     "gameModeOption": {
       "multiple-choice": "Multiple choice",
@@ -63,9 +82,11 @@
     "isPrivate": "Private room",
     "submit": "Create",
     "cancel": "Cancel",
-    "shareCodeCreated": "Private room created. Share code:"
+    "shareCodeCreated": "Private room created. Share code:",
+    "solitaryStartFailed": "Couldn't start your practice match — not enough questions for this topic yet. Try a different topic or mode."
   },
   "room": {
+    "eyebrow": "Waiting Room",
     "host": "Host",
     "shareCode": "Share code",
     "startNow": "Start now",
@@ -77,6 +98,7 @@
     "signUpToPlay": "Sign up or log in to play"
   },
   "match": {
+    "eyebrow": "Match Complete",
     "getReady": "Get ready! The match starts in...",
     "questionProgress": "Question {{index}} of {{total}}",
     "reviewing": "Question review",
@@ -92,6 +114,7 @@
     "correctAnswerWas": "The correct answer was"
   },
   "admin": {
+    "eyebrow": "Game Master",
     "title": "Question bank",
     "addQuestion": "Add question",
     "editQuestion": "Edit question",
@@ -123,9 +146,9 @@
     "signUpToChat": "Sign up to send messages"
   },
   "tournaments": {
+    "eyebrow": "Bracket Play",
     "title": "Tournaments",
     "createTournament": "Create tournament",
-    "noTournaments": "No open tournaments yet. Create the first one!",
     "view": "View",
     "back": "Back to tournaments",
     "tournamentSize": "Tournament size",

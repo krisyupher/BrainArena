@@ -27,5 +27,8 @@ public class RoomRepository(BrainArenaDbContext db) : IRoomRepository
     public async Task AddAsync(Room room, CancellationToken ct = default) =>
         await db.Rooms.AddAsync(room, ct);
 
+    public Task<RoomStatus?> GetStatusNoTrackingAsync(Guid id, CancellationToken ct = default) =>
+        db.Rooms.AsNoTracking().Where(r => r.Id == id).Select(r => (RoomStatus?)r.Status).FirstOrDefaultAsync(ct);
+
     public Task SaveChangesAsync(CancellationToken ct = default) => db.SaveChangesAsync(ct);
 }

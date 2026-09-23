@@ -59,6 +59,9 @@ public class FakeRoomRepository : IRoomRepository
         return Task.CompletedTask;
     }
 
+    public Task<RoomStatus?> GetStatusNoTrackingAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(_rooms.TryGetValue(id, out var room) ? room.Status : (RoomStatus?)null);
+
     public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;
 }
 

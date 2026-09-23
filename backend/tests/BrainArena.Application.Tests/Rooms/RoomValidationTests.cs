@@ -101,4 +101,36 @@ public class RoomValidationTests
 
         Assert.Null(exception);
     }
+
+    [Fact]
+    public void Validate_AcceptsASolitaryRequestWithOnePlayer()
+    {
+        // MaxPlayers/MinPlayersToStart=1 would fail the ordinary 2-player floor for a Multiplayer
+        // room — Solitary bypasses that floor entirely (RoomService forces both to 1 server-side).
+        var request = ValidRequest() with { Kind = RoomKind.Solitary, MaxPlayers = 1, MinPlayersToStart = 1 };
+
+        var exception = Record.Exception(() => RoomValidation.Validate(request, ValidGameModeKeys));
+
+        Assert.Null(exception);
+    }
+
+    [Theory]
+    [InlineData(4)]
+    [InlineData(21)]
+    public void Validate_RejectsQuestionCountOutsideRangeEvenForASolitaryRoom(int questionCount)
+    {
+        var request = ValidRequest() with { Kind = RoomKind.Solitary, MaxPlayers = 1, MinPlayersToStart = 1, QuestionCount = questionCount };
+
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
+    }
+
+    [Theory]
+    [InlineData(9)]
+    [InlineData(61)]
+    public void Validate_RejectsSecondsPerQuestionOutsideRangeEvenForASolitaryRoom(int seconds)
+    {
+        var request = ValidRequest() with { Kind = RoomKind.Solitary, MaxPlayers = 1, MinPlayersToStart = 1, SecondsPerQuestion = seconds };
+
+        Assert.Throws<AppException>(() => RoomValidation.Validate(request, ValidGameModeKeys));
+    }
 }

@@ -18,7 +18,7 @@
         </span>
 
         @if (c.score !== undefined) {
-          <span class="score">{{ c.score }}</span>
+          <span class="score" [class.bump]="isBumped(c.userId)">{{ c.score }}</span>
         }
 
         @if (canReact() && c.userId !== myUserId()) {

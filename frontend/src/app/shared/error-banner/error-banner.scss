@@ -1,0 +1,51 @@
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 92, 114, 0.1);
+  border: 1px solid rgba(255, 92, 114, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: var(--spacing);
+  color: var(--color-error);
+  font-size: 0.85rem;
+  animation: error-in var(--transition-base);
+}
+
+.error-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.error-message {
+  flex: 1;
+}
+
+.dismiss-btn {
+  width: auto;
+  flex: none;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--color-error);
+  font-size: 0.8rem;
+
+  &:hover {
+    filter: none;
+    transform: none;
+    opacity: 0.7;
+  }
+}
+
+@keyframes error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

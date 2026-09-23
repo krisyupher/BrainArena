@@ -225,6 +225,11 @@ namespace BrainArena.Infrastructure.Data.Migrations
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<int>("MaxPlayers")
                         .HasColumnType("integer");
 

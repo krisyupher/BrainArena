@@ -1,6 +1,6 @@
 @if (tournament(); as t) {
   <div class="tournament-page">
-    <a class="back-link" routerLink="/tournaments">{{ 'tournaments.back' | transloco }}</a>
+    <a class="back-link" routerLink="/lobby" [queryParams]="{ tab: 'tournament' }">{{ 'tournaments.back' | transloco }}</a>
 
     <h1>{{ t.name }}</h1>
     <p class="tournament-meta">

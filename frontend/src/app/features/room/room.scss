@@ -1,6 +1,28 @@
 .room-page {
   text-align: center;
   min-width: 0;
+  background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: calc(var(--spacing) * 1.5);
+  box-shadow: var(--shadow-panel);
+  animation: panel-in var(--transition-base);
+}
+
+.room-eyebrow {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.room-page h1 {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #ffffff;
 }
 
 .room-topic {
@@ -9,14 +31,23 @@
 }
 
 .share-code-hint {
-  background: var(--color-surface);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 12px;
   margin: var(--spacing) 0;
+
+  strong {
+    color: var(--color-gold);
+    font-family: var(--font-display);
+    letter-spacing: 0.1em;
+  }
 }
 
 .waiting-text {
-  color: var(--color-muted);
+  color: #67b7ff;
+  justify-content: center;
+  font-weight: 600;
 }
 
 .spectator-cta {
@@ -36,10 +67,4 @@
 button {
   width: 100%;
   margin-top: 8px;
-
-  &.secondary {
-    background: transparent;
-    color: var(--color-muted);
-    border: 1px solid var(--color-border);
-  }
 }
