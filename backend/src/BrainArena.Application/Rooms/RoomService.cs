@@ -1,4 +1,5 @@
 using BrainArena.Application.Abstractions;
+using BrainArena.Application.Auth;
 using BrainArena.Application.Common;
 using BrainArena.Application.Matches;
 using BrainArena.Domain.Entities;
@@ -11,7 +12,9 @@ public class RoomService(
     IUserRepository users,
     IRoomNotifier notifier,
     IMatchOrchestrator matchOrchestrator,
-    IGameModeRegistry gameModeRegistry) : IRoomService
+    IGameModeRegistry gameModeRegistry,
+    IPasswordHasher passwordHasher,
+    IJwtTokenService jwtTokenService) : IRoomService
 {
     public async Task<IReadOnlyList<RoomSummaryDto>> GetOpenRoomsAsync(CancellationToken ct = default)
     {
@@ -23,12 +26,46 @@ public class RoomService(
             .ToList();
     }
 
-    public async Task<RoomDetailDto> CreateRoomAsync(Guid hostUserId, CreateRoomRequest request, CancellationToken ct = default)
+    public async Task<CreateRoomResult> CreateRoomAsync(Guid? hostUserId, CreateRoomRequest request, CancellationToken ct = default)
     {
         RoomValidation.Validate(request, gameModeRegistry.ModeKeys);
 
-        var host = await users.GetByIdAsync(hostUserId, ct)
-            ?? throw new AppException("Host user not found.", 404);
+        AuthResponse? guestAuth = null;
+        User host;
+
+        if (hostUserId is null)
+        {
+            // Anonymous caller — only allowed for a Solitary practice room (Multiplayer/Tournament
+            // still require a real sign-in). Auto-create a throwaway guest account and mint it a
+            // real JWT so the caller leaves this request as a completely ordinary authenticated
+            // user from every other part of the app's perspective.
+            if (request.Kind != RoomKind.Solitary)
+            {
+                throw new AppException("Sign in to create this room.", 401);
+            }
+
+            var guest = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = $"guest-{Guid.NewGuid():N}@guest.brainarena.local",
+                DisplayName = "Guest",
+                PasswordHash = string.Empty,
+                Role = UserRole.Player,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            guest.PasswordHash = passwordHasher.Hash(guest, Guid.NewGuid().ToString("N"));
+
+            await users.AddAsync(guest, ct);
+
+            host = guest;
+            hostUserId = guest.Id;
+            guestAuth = new AuthResponse(jwtTokenService.GenerateToken(guest), guest.Id, guest.DisplayName, guest.Role.ToString());
+        }
+        else
+        {
+            host = await users.GetByIdAsync(hostUserId.Value, ct)
+                ?? throw new AppException("Host user not found.", 404);
+        }
 
         // A solitary practice room is always exactly 1/1 and never shareable — force these
         // server-side regardless of what the client sent, so a crafted payload can't create a
@@ -51,7 +88,8 @@ public class RoomService(
             GameMode = request.GameMode,
             Status = RoomStatus.Waiting,
             Kind = request.Kind,
-            HostUserId = hostUserId,
+            Difficulty = request.Difficulty,
+            HostUserId = hostUserId.Value,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -63,7 +101,7 @@ public class RoomService(
         room.Players.Add(new RoomPlayer
         {
             RoomId = room.Id,
-            UserId = hostUserId,
+            UserId = hostUserId.Value,
             JoinedAt = DateTimeOffset.UtcNow,
             User = host
         });
@@ -87,7 +125,7 @@ public class RoomService(
             room.Status = await rooms.GetStatusNoTrackingAsync(room.Id, ct) ?? room.Status;
         }
 
-        return MapDetail(room);
+        return new CreateRoomResult(MapDetail(room), guestAuth);
     }
 
     public async Task<RoomDetailDto> JoinRoomAsync(Guid userId, Guid roomId, CancellationToken ct = default)
@@ -204,12 +242,12 @@ public class RoomService(
 
     private static RoomSummaryDto MapSummary(Room room) => new(
         room.Id, room.Name, room.Topic, room.GameMode, room.QuestionCount, room.SecondsPerQuestion,
-        room.Players.Count, room.MaxPlayers, room.Status, room.IsPrivate, room.Kind);
+        room.Players.Count, room.MaxPlayers, room.Status, room.IsPrivate, room.Kind, room.Difficulty);
 
     private static RoomDetailDto MapDetail(Room room) => new(
         room.Id, room.Name, room.Topic, room.MaxPlayers, room.MinPlayersToStart,
         room.QuestionCount, room.SecondsPerQuestion, room.IsPrivate, room.ShareCode,
-        room.Status, room.HostUserId, room.Kind,
+        room.Status, room.HostUserId, room.Kind, room.Difficulty,
         room.Players
             .Select(p => new RoomPlayerDto(p.UserId, p.User?.DisplayName ?? string.Empty))
             .ToList());

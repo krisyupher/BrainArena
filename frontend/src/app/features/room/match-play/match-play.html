@@ -11,7 +11,9 @@
       <div class="question-panel">
         <p class="progress">{{ 'match.questionProgress' | transloco: { index: q.index + 1, total: q.totalQuestions } }}</p>
         <p class="time-left" [class.time-low]="secondsLeft() <= 5">{{ secondsLeft() }}s</p>
-        <h2>{{ q.text }}</h2>
+        @if (q.kind !== 'flash-arithmetic') {
+          <h2>{{ q.text }}</h2>
+        }
 
         @if (q.kind === 'calculation') {
           <app-calculation-panel
@@ -20,6 +22,18 @@
             [answerLocked]="answerLocked()"
             [canAnswer]="!!isParticipant()"
             [errorMessage]="errorMessage()"
+            (answerSubmitted)="submitNumeric($event)"
+          />
+        } @else if (q.kind === 'flash-arithmetic') {
+          <app-flash-arithmetic-panel
+            phase="question"
+            [question]="q"
+            [answerLocked]="answerLocked()"
+            [canAnswer]="!!isParticipant()"
+            [errorMessage]="errorMessage()"
+            [streak]="flashStreak()"
+            [bestStreak]="flashBestStreak()"
+            [accuracy]="flashAccuracy()"
             (answerSubmitted)="submitNumeric($event)"
           />
         } @else {
@@ -41,10 +55,14 @@
         <p class="progress">{{ 'match.reviewing' | transloco }}</p>
 
         @if (currentQuestion(); as q) {
-          <h2>{{ q.text }}</h2>
+          @if (q.kind !== 'flash-arithmetic') {
+            <h2>{{ q.text }}</h2>
+          }
 
           @if (rv.kind === 'calculation') {
             <app-calculation-panel phase="reveal" [question]="q" [reveal]="rv" />
+          } @else if (rv.kind === 'flash-arithmetic') {
+            <app-flash-arithmetic-panel phase="reveal" [question]="q" [reveal]="rv" [mySubmittedAnswer]="mySubmittedAnswer()" />
           } @else {
             <app-multiple-choice-panel phase="reveal" [question]="q" [reveal]="rv" />
           }

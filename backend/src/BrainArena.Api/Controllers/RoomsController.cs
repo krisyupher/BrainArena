@@ -36,10 +36,11 @@ public class RoomsController(
     }
 
     [HttpPost]
-    public async Task<ActionResult<RoomDetailDto>> Create(CreateRoomRequest request, CancellationToken ct)
+    [AllowAnonymous]
+    public async Task<ActionResult<CreateRoomResult>> Create(CreateRoomRequest request, CancellationToken ct)
     {
-        var room = await roomService.CreateRoomAsync(User.GetUserId(), request, ct);
-        return CreatedAtAction(nameof(GetById), new { id = room.Id }, room);
+        var result = await roomService.CreateRoomAsync(User.GetUserIdOrNull(), request, ct);
+        return CreatedAtAction(nameof(GetById), new { id = result.Room.Id }, result);
     }
 
     [HttpPost("{id:guid}/join")]

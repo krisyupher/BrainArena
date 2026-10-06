@@ -21,6 +21,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IGameMode, MultipleChoiceGameMode>();
         services.AddSingleton<IGameMode, CalculationGameMode>();
+        services.AddSingleton<IGameMode, FlashArithmeticGameMode>();
         services.AddSingleton<IGameModeRegistry, GameModeRegistry>();
         services.AddSingleton<IChatRateLimiter, ChatRateLimiter>();
         services.AddSingleton<TournamentAdvancementLock>();

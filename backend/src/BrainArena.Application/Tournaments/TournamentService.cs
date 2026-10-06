@@ -40,6 +40,7 @@ public class TournamentService(
             RoomSize = request.RoomSize,
             AdvancesPerRoom = request.AdvancesPerRoom,
             MinPlayersToStart = request.MinPlayersToStart,
+            Difficulty = request.Difficulty,
             Status = TournamentStatus.Waiting,
             CreatorUserId = creatorUserId,
             CurrentRoundNumber = 0,
@@ -273,6 +274,7 @@ public class TournamentService(
                 // always has 2+ players (RoomSize), never a solitary practice room.
                 HostUserId = group[0],
                 GameMode = tournament.GameMode,
+                Difficulty = tournament.Difficulty,
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
@@ -321,7 +323,7 @@ public class TournamentService(
     }
 
     private static TournamentSummaryDto MapSummary(Tournament t) =>
-        new(t.Id, t.Name, t.Topic, t.GameMode, t.Players.Count, t.TournamentSize, t.Status);
+        new(t.Id, t.Name, t.Topic, t.GameMode, t.Players.Count, t.TournamentSize, t.Status, t.Difficulty);
 
     private static TournamentDetailDto MapDetail(Tournament t)
     {
@@ -330,7 +332,7 @@ public class TournamentService(
         return new TournamentDetailDto(
             t.Id, t.Name, t.Topic, t.GameMode, t.QuestionCount, t.SecondsPerQuestion,
             t.TournamentSize, t.RoomSize, t.AdvancesPerRoom, t.MinPlayersToStart,
-            t.Status, t.CreatorUserId, t.CurrentRoundNumber, champion?.UserId,
+            t.Status, t.CreatorUserId, t.CurrentRoundNumber, champion?.UserId, t.Difficulty,
             t.Players
                 .Select(p => new TournamentPlayerDto(p.UserId, p.User?.DisplayName ?? string.Empty, p.Status, p.EliminatedAtRound))
                 .ToList(),

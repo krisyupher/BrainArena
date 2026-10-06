@@ -43,7 +43,12 @@ export class AuthService {
     this.router.navigateByUrl('/login');
   }
 
-  private applyAuth(response: AuthResponse): void {
+  /**
+   * Public because it's also called after an anonymous Solitary room creation returns a
+   * freshly-minted guest account's auth — "store token+user, update signal" applies identically
+   * whether the account came from register/login or was auto-created server-side.
+   */
+  applyAuth(response: AuthResponse): void {
     const stored: StoredAuth = {
       token: response.token,
       userId: response.userId,

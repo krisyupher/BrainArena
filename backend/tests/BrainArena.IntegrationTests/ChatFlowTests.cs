@@ -43,7 +43,7 @@ public class ChatFlowTests(IntegrationTestFactory factory) : IClassFixture<Integ
             isPrivate = false
         });
         createResponse.EnsureSuccessStatusCode();
-        var room = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var room = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("room");
         var roomId = room.GetProperty("id").GetGuid();
 
         var joinResponse = await PostAsync(client, second.Token, $"/api/rooms/{roomId}/join");

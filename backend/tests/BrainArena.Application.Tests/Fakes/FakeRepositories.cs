@@ -132,6 +132,19 @@ public class AlwaysAllowRateLimiter : IChatRateLimiter
     public bool TryConsume(Guid userId) => true;
 }
 
+/// <summary>Deterministic, insecure stand-ins — never used outside tests.</summary>
+public class FakePasswordHasher : IPasswordHasher
+{
+    public string Hash(User user, string password) => $"hashed:{password}";
+
+    public bool Verify(User user, string hash, string password) => hash == $"hashed:{password}";
+}
+
+public class FakeJwtTokenService : IJwtTokenService
+{
+    public string GenerateToken(User user) => $"token-for-{user.Id}";
+}
+
 public class FakeMatchOrchestrator : IMatchOrchestrator
 {
     public int AutoStartAttempts { get; private set; }

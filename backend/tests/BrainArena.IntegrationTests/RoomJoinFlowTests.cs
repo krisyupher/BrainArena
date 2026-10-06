@@ -42,7 +42,7 @@ public class RoomJoinFlowTests(IntegrationTestFactory factory) : IClassFixture<I
             IsPrivate: false));
 
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
-        var room = (await createResponse.Content.ReadFromJsonAsync<RoomDetailDto>(JsonOptions))!;
+        var room = (await createResponse.Content.ReadFromJsonAsync<CreateRoomResult>(JsonOptions))!.Room;
         Assert.Single(room.Players);
 
         await JoinAsync(client, second.Token, room.Id);
@@ -78,7 +78,7 @@ public class RoomJoinFlowTests(IntegrationTestFactory factory) : IClassFixture<I
             QuestionCount: 5,
             SecondsPerQuestion: 15,
             IsPrivate: false));
-        var room = (await createResponse.Content.ReadFromJsonAsync<RoomDetailDto>(JsonOptions))!;
+        var room = (await createResponse.Content.ReadFromJsonAsync<CreateRoomResult>(JsonOptions))!.Room;
 
         await JoinAsync(client, second.Token, room.Id);
         await JoinAsync(client, third.Token, room.Id);

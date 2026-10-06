@@ -1,4 +1,4 @@
-import { GameMode, RoomStatus, RoomTopic } from './room.model';
+import { Difficulty, GameMode, RoomStatus, RoomTopic } from './room.model';
 
 export type TournamentStatus = 'Waiting' | 'InProgress' | 'Finished';
 export type TournamentPlayerStatus = 'Active' | 'Eliminated' | 'Champion';
@@ -13,6 +13,7 @@ export interface CreateTournamentRequest {
   roomSize: number;
   advancesPerRoom: number;
   minPlayersToStart: number;
+  difficulty: Difficulty;
 }
 
 export interface TournamentSummary {
@@ -23,6 +24,7 @@ export interface TournamentSummary {
   playerCount: number;
   tournamentSize: number;
   status: TournamentStatus;
+  difficulty: Difficulty;
 }
 
 export interface TournamentPlayer {
@@ -64,6 +66,7 @@ export interface TournamentDetail {
   creatorUserId: string;
   currentRoundNumber: number;
   championUserId: string | null;
+  difficulty: Difficulty;
   players: TournamentPlayer[];
   rounds: TournamentRound[];
 }

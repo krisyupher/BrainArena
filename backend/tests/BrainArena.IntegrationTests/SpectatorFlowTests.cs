@@ -71,7 +71,7 @@ public class SpectatorFlowTests(IntegrationTestFactory factory) : IClassFixture<
             isPrivate = false
         });
         createResponse.EnsureSuccessStatusCode();
-        var room = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var room = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("room");
         var roomId = room.GetProperty("id").GetGuid();
 
         await using var hostConn = BuildHubConnection(host.Token);
@@ -148,7 +148,7 @@ public class SpectatorFlowTests(IntegrationTestFactory factory) : IClassFixture<
             isPrivate
         });
         response.EnsureSuccessStatusCode();
-        var room = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var room = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("room");
         return room.GetProperty("id").GetGuid();
     }
 

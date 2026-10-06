@@ -10,6 +10,8 @@ export interface QuestionStartedEvent {
   /** Multiple-choice only. */
   options: string[] | null;
   endsAtUtc: string;
+  /** Flash-arithmetic only — this round's difficulty Level. */
+  level: number | null;
 }
 
 export interface ScoreboardEntry {

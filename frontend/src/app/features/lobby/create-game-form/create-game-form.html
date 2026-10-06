@@ -41,6 +41,17 @@
         </label>
       }
 
+      @if (isDifficultyRelevant) {
+        <label>
+          {{ 'createRoom.difficulty' | transloco }}
+          <select formControlName="difficulty">
+            @for (difficulty of difficulties; track difficulty) {
+              <option [value]="difficulty">{{ 'createRoom.difficultyOption.' + difficulty | transloco }}</option>
+            }
+          </select>
+        </label>
+      }
+
       @if (form.controls.kind.value === 'multiplayer') {
         <label>
           {{ 'createRoom.maxPlayers' | transloco }}

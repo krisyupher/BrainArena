@@ -11,7 +11,8 @@ public record CreateTournamentRequest(
     int TournamentSize,
     int RoomSize,
     int AdvancesPerRoom,
-    int MinPlayersToStart);
+    int MinPlayersToStart,
+    Difficulty Difficulty = Difficulty.Medium);
 
 public record TournamentSummaryDto(
     Guid Id,
@@ -20,7 +21,8 @@ public record TournamentSummaryDto(
     string GameMode,
     int PlayerCount,
     int TournamentSize,
-    TournamentStatus Status);
+    TournamentStatus Status,
+    Difficulty Difficulty);
 
 public record TournamentPlayerDto(
     Guid UserId,
@@ -52,5 +54,6 @@ public record TournamentDetailDto(
     Guid CreatorUserId,
     int CurrentRoundNumber,
     Guid? ChampionUserId,
+    Difficulty Difficulty,
     IReadOnlyList<TournamentPlayerDto> Players,
     IReadOnlyList<TournamentRoundDto> Rounds);

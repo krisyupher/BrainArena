@@ -72,9 +72,16 @@
     "gameMode": "Modo de juego",
     "gameModeOption": {
       "multiple-choice": "Opción múltiple",
-      "calculation": "Cálculo"
+      "calculation": "Cálculo",
+      "flash-arithmetic": "Aritmética relámpago"
     },
     "topic": "Tema",
+    "difficulty": "Dificultad",
+    "difficultyOption": {
+      "Easy": "Fácil",
+      "Medium": "Media",
+      "Hard": "Difícil"
+    },
     "maxPlayers": "Jugadores máximos",
     "minPlayersToStart": "Mínimo para iniciar",
     "questionCount": "Número de preguntas",
@@ -111,7 +118,14 @@
     "backToLobby": "Volver a las salas",
     "numericAnswerPlaceholder": "Tu respuesta",
     "submitAnswer": "Enviar",
-    "correctAnswerWas": "La respuesta correcta era"
+    "correctAnswerWas": "La respuesta correcta era",
+    "flash": {
+      "level": "Nivel",
+      "streak": "Racha",
+      "bestStreak": "Mejor racha",
+      "accuracy": "Precisión",
+      "sumPlaceholder": "Suma de los números"
+    }
   },
   "admin": {
     "eyebrow": "Panel de administración",

@@ -4,7 +4,7 @@
       <span class="lobby-eyebrow">{{ 'lobby.eyebrow' | transloco }}</span>
       <h1>{{ 'lobby.title' | transloco }}</h1>
     </div>
-    @if (auth.isAuthenticated()) {
+    @if (auth.isAuthenticated() || activeTab() === 'solitary') {
       <button type="button" class="btn-create" (click)="showCreateForm.set(!showCreateForm())">
         <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -39,14 +39,12 @@
   </div>
 
   @if (activeTab() === 'solitary') {
+    <!-- Solitary needs no sign-in — creating a practice room anonymously auto-creates a throwaway
+         guest account server-side, unlike Multiplayer/Tournament which still require one. -->
     <app-empty-state [message]="'lobby.practiceCta' | transloco">
-      @if (auth.isAuthenticated()) {
-        <button type="button" class="btn-create" (click)="showCreateForm.set(true)">
-          {{ 'lobby.practiceNow' | transloco }}
-        </button>
-      } @else {
-        <a class="login-cta" routerLink="/login">{{ 'lobby.loginToPlay' | transloco }}</a>
-      }
+      <button type="button" class="btn-create" (click)="showCreateForm.set(true)">
+        {{ 'lobby.practiceNow' | transloco }}
+      </button>
     </app-empty-state>
   } @else if (loading()) {
     <ul class="room-list">

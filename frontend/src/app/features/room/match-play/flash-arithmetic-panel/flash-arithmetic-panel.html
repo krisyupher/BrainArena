@@ -1,0 +1,44 @@
+@if (phase() === 'question') {
+  <div class="flash-hud">
+    <span class="hud-item">{{ 'match.flash.level' | transloco }} {{ question().level }}</span>
+    <span class="hud-item">{{ 'match.flash.streak' | transloco }} {{ streak() }}</span>
+    <span class="hud-item">{{ 'match.flash.bestStreak' | transloco }} {{ bestStreak() }}</span>
+    <span class="hud-item">{{ 'match.flash.accuracy' | transloco }} {{ accuracy() }}%</span>
+  </div>
+
+  <div class="flash-stage">
+    @if (stage() === 'flash' && currentNumber() !== null) {
+      <span class="flash-number">{{ currentNumber() }}</span>
+    } @else if (stage() === 'input') {
+      @if (canAnswer()) {
+        <form class="numeric-form" (ngSubmit)="submit()">
+          <input
+            type="number"
+            inputmode="decimal"
+            [formControl]="answerControl"
+            [placeholder]="'match.flash.sumPlaceholder' | transloco"
+          />
+          <button type="submit" [disabled]="answerLocked() || answerControl.invalid">
+            {{ 'match.submitAnswer' | transloco }}
+          </button>
+        </form>
+
+        @if (errorMessage(); as msg) {
+          <app-error-banner [message]="msg" />
+        }
+      } @else {
+        <p class="spectator-tag">{{ 'room.spectating' | transloco }}</p>
+      }
+    }
+    <!-- 'gap' stage intentionally renders nothing — the black screen between flashed numbers. -->
+  </div>
+} @else if (reveal(); as rv) {
+  @if (mySubmittedAnswer() !== null && mySubmittedAnswer() === rv.correctNumericAnswer) {
+    <p class="flash-reveal flash-reveal-correct">&#10003;</p>
+  } @else {
+    <p class="flash-reveal">
+      {{ 'match.correctAnswerWas' | transloco }}
+      <strong>{{ rv.correctNumericAnswer }}</strong>
+    </p>
+  }
+}

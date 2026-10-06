@@ -17,6 +17,8 @@ public class Room
     public RoomKind Kind { get; set; } = RoomKind.Multiplayer;
     public Guid HostUserId { get; set; }
     public string GameMode { get; set; } = "multiple-choice";
+    /// <summary>Only meaningful for modes that read it (currently FlashArithmeticGameMode) — ignored otherwise, same convention as Topic.</summary>
+    public Difficulty Difficulty { get; set; } = Difficulty.Medium;
     public DateTimeOffset CreatedAt { get; set; }
 
     public User? HostUser { get; set; }

@@ -141,7 +141,7 @@ public class MatchOrchestrator(
             MatchPhase.Question => new MatchResyncPayload(
                 state.MatchId,
                 "Question",
-                state.GameMode.ToClientPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.Questions.Count, state.PhaseEndsAtUtc),
+                state.GameMode.ToClientPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.TargetQuestionCount, state.PhaseEndsAtUtc),
                 null,
                 player.Score,
                 scoreboard),
@@ -171,7 +171,7 @@ public class MatchOrchestrator(
             MatchPhase.Question => new MatchSpectatorSyncPayload(
                 state.MatchId,
                 "Question",
-                state.GameMode.ToClientPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.Questions.Count, state.PhaseEndsAtUtc),
+                state.GameMode.ToClientPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.TargetQuestionCount, state.PhaseEndsAtUtc),
                 null,
                 scoreboard),
             MatchPhase.Reveal => new MatchSpectatorSyncPayload(
@@ -207,14 +207,30 @@ public class MatchOrchestrator(
             var questionRepo = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
             var gameMode = gameModeRegistry.Resolve(room.GameMode);
 
-            var questions = await gameMode.PrepareQuestionsAsync(room, questionRepo, ct);
-            if (questions.Count < room.QuestionCount)
+            IReadOnlyList<Question> questions;
+            var initialAdaptiveState = 0;
+
+            if (gameMode.RequiresIncrementalGeneration(room))
             {
-                await hub.Clients.Group(RoomHub.RoomGroupName(room.Id)).SendAsync(
-                    "MatchStartFailed",
-                    $"Not enough questions available for this topic yet (need {room.QuestionCount}, have {questions.Count}).",
-                    ct);
-                return;
+                // Live-adaptive difficulty (Solitary flash-arithmetic): only round 0's content can
+                // be decided upfront — every later round depends on whether the previous one was
+                // answered correctly, which isn't known yet. RunMatchLoopAsync generates the rest
+                // just in time.
+                var (question, nextAdaptiveState) = await gameMode.PrepareNextQuestionAsync(room, 0, null, questionRepo, ct);
+                questions = new List<Question> { question };
+                initialAdaptiveState = nextAdaptiveState;
+            }
+            else
+            {
+                questions = await gameMode.PrepareQuestionsAsync(room, questionRepo, ct);
+                if (questions.Count < room.QuestionCount)
+                {
+                    await hub.Clients.Group(RoomHub.RoomGroupName(room.Id)).SendAsync(
+                        "MatchStartFailed",
+                        $"Not enough questions available for this topic yet (need {room.QuestionCount}, have {questions.Count}).",
+                        ct);
+                    return;
+                }
             }
 
             var matchId = Guid.NewGuid();
@@ -259,6 +275,10 @@ public class MatchOrchestrator(
                 RoomId = room.Id,
                 GameMode = gameMode,
                 SecondsPerQuestion = room.SecondsPerQuestion,
+                Topic = room.Topic,
+                Difficulty = room.Difficulty,
+                TargetQuestionCount = room.QuestionCount,
+                AdaptiveState = initialAdaptiveState,
                 Questions = matchQuestions.Select(mq => new MatchQuestionRuntime { MatchQuestion = mq }).ToList(),
                 Players = runtimePlayers
             };
@@ -285,15 +305,20 @@ public class MatchOrchestrator(
 
             await Task.Delay(_countdownDuration);
 
-            for (var i = 0; i < state.Questions.Count; i++)
+            for (var i = 0; i < state.TargetQuestionCount; i++)
             {
+                if (i >= state.Questions.Count)
+                {
+                    await GenerateNextRoundAsync(state, i);
+                }
+
                 state.CurrentIndex = i;
                 var current = state.Questions[i];
                 var endsAt = DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(state.SecondsPerQuestion));
                 state.PhaseEndsAtUtc = endsAt;
                 state.Phase = MatchPhase.Question;
 
-                var payload = state.GameMode.ToClientPayload(current.MatchQuestion, i, state.Questions.Count, endsAt);
+                var payload = state.GameMode.ToClientPayload(current.MatchQuestion, i, state.TargetQuestionCount, endsAt);
                 await hub.Clients.Group(groupName).SendAsync("QuestionStarted", payload);
 
                 var remaining = endsAt - DateTimeOffset.UtcNow;
@@ -321,6 +346,46 @@ public class MatchOrchestrator(
             logger.LogError(ex, "Match loop for room {RoomId} failed", roomId);
             _matches.TryRemove(roomId, out _);
         }
+    }
+
+    /// <summary>
+    /// Only called for a mode with RequiresIncrementalGeneration — decides round `index`'s content
+    /// now, based on whether the previous round was answered correctly. A fresh scope per call
+    /// (same pattern StartMatchAsync/FinalizeMatchAsync already use), and deliberately does NOT
+    /// re-fetch Room — Topic/Difficulty were cached on MatchRuntimeState at match start, since a
+    /// re-query here would risk the exact EF Core stale-read trap already documented twice in
+    /// CLAUDE.md (Mini-tournaments, "Rooms have a Kind"). This runs fully to completion (the
+    /// generated MatchQuestion is committed) before the caller advances CurrentIndex/Phase, so a
+    /// concurrent hub reconnect (Join/Snapshot) never observes a half-generated round.
+    /// </summary>
+    private async Task GenerateNextRoundAsync(MatchRuntimeState state, int index)
+    {
+        // Solitary is always exactly 1 player, so there's at most one answer entry; never
+        // answering in time counts as a miss, same as a wrong answer.
+        var previousAnswerWasCorrect = state.Questions[index - 1].Answers.Values.FirstOrDefault()?.IsCorrect ?? false;
+
+        using var scope = scopeFactory.CreateScope();
+        var questionRepo = scope.ServiceProvider.GetRequiredService<IQuestionRepository>();
+        var roomForGeneration = new Room { Name = string.Empty, Topic = state.Topic, Difficulty = state.Difficulty };
+
+        var (question, nextAdaptiveState) = await state.GameMode.PrepareNextQuestionAsync(
+            roomForGeneration, state.AdaptiveState, previousAnswerWasCorrect, questionRepo, CancellationToken.None);
+        state.AdaptiveState = nextAdaptiveState;
+
+        var matchQuestion = new MatchQuestion
+        {
+            Id = Guid.NewGuid(),
+            MatchId = state.MatchId,
+            QuestionId = question.Id,
+            OrderIndex = index,
+            Question = question
+        };
+
+        var db = scope.ServiceProvider.GetRequiredService<BrainArenaDbContext>();
+        db.MatchQuestions.Add(matchQuestion);
+        await db.SaveChangesAsync();
+
+        state.Questions.Add(new MatchQuestionRuntime { MatchQuestion = matchQuestion });
     }
 
     private async Task FinalizeMatchAsync(MatchRuntimeState state)

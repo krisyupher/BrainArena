@@ -1,0 +1,84 @@
+.flash-hud {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: var(--spacing);
+}
+
+.hud-item {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
+}
+
+// Deliberately hardcoded, not theme tokens — the mechanic depends on stark black/white contrast
+// for fast number recognition, and that must stay identical in light and dark mode alike.
+.flash-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  background: #000;
+  border-radius: var(--radius);
+  margin: var(--spacing) 0;
+}
+
+.flash-number {
+  font-family: var(--font-display);
+  font-size: 6rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.numeric-form {
+  display: flex;
+  gap: 10px;
+  padding: 16px;
+
+  input {
+    flex: 1;
+    text-align: center;
+    font-size: 1.2rem;
+  }
+
+  button {
+    width: auto;
+  }
+}
+
+.spectator-tag {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.flash-reveal {
+  text-align: center;
+  background: linear-gradient(165deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  border: 2px solid var(--color-success);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin: var(--spacing) 0;
+  font-weight: 600;
+  box-shadow: 0 0 16px rgba(46, 230, 166, 0.25);
+
+  strong {
+    font-family: var(--font-display);
+    color: var(--color-success);
+  }
+}
+
+.flash-reveal-correct {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  color: var(--color-success);
+  padding: 20px 16px;
+}

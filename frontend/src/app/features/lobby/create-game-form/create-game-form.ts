@@ -3,7 +3,9 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { RoomService } from '../../../core/services/room.service';
 import { TournamentService } from '../../../core/services/tournament.service';
-import { GAME_MODES, GameMode, ROOM_TOPICS, RoomKind, RoomTopic } from '../../../core/models/room.model';
+import { AuthService } from '../../../core/services/auth.service';
+import { RoomHubService } from '../../../core/services/room-hub.service';
+import { DIFFICULTIES, Difficulty, GAME_MODES, GameMode, ROOM_TOPICS, RoomKind, RoomTopic } from '../../../core/models/room.model';
 
 /** UI-level kind selector — a superset of the wire-level RoomKind, since "tournament" isn't a Room at all. */
 export type GameKind = 'solitary' | 'multiplayer' | 'tournament';
@@ -20,6 +22,8 @@ export class CreateGameForm {
   private readonly fb = inject(FormBuilder);
   private readonly roomService = inject(RoomService);
   private readonly tournamentService = inject(TournamentService);
+  private readonly auth = inject(AuthService);
+  private readonly roomHub = inject(RoomHubService);
   private readonly transloco = inject(TranslocoService);
 
   /** Pre-selects the form's kind to match whichever lobby tab was active when it was opened. */
@@ -33,6 +37,7 @@ export class CreateGameForm {
   readonly kinds = GAME_KINDS;
   readonly topics = ROOM_TOPICS;
   readonly gameModes = GAME_MODES;
+  readonly difficulties = DIFFICULTIES;
   readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly createdShareCode = signal<string | null>(null);
@@ -49,12 +54,18 @@ export class CreateGameForm {
     isPrivate: [false],
     tournamentSize: [8, [Validators.required, Validators.min(4), Validators.max(64)]],
     roomSize: [2, [Validators.required, Validators.min(2), Validators.max(10)]],
-    advancesPerRoom: [1, [Validators.required, Validators.min(1)]]
+    advancesPerRoom: [1, [Validators.required, Validators.min(1)]],
+    difficulty: ['Medium' as Difficulty, [Validators.required]]
   });
 
-  /** Topic only drives the multiple-choice question bank — calculation mode generates its own problems. */
+  /** Topic only drives the multiple-choice question bank — calculation/flash-arithmetic generate their own problems. */
   get isTopicRelevant(): boolean {
     return this.form.controls.gameMode.value === 'multiple-choice';
+  }
+
+  /** Doubles as Solitary's starting Level and Multiplayer/Tournament's fixed difficulty for the whole match. */
+  get isDifficultyRelevant(): boolean {
+    return this.form.controls.gameMode.value === 'flash-arithmetic';
   }
 
   setKind(kind: GameKind): void {
@@ -83,7 +94,8 @@ export class CreateGameForm {
           tournamentSize: values.tournamentSize,
           roomSize: values.roomSize,
           advancesPerRoom: values.advancesPerRoom,
-          minPlayersToStart: values.minPlayersToStart
+          minPlayersToStart: values.minPlayersToStart,
+          difficulty: values.difficulty
         })
         .subscribe({
           next: (tournament) => {
@@ -107,11 +119,22 @@ export class CreateGameForm {
         maxPlayers: values.maxPlayers,
         minPlayersToStart: values.minPlayersToStart,
         isPrivate: values.isPrivate,
-        kind
+        kind,
+        difficulty: values.difficulty
       })
       .subscribe({
-        next: (room) => {
+        next: async (result) => {
           this.submitting.set(false);
+          const room = result.room;
+
+          if (result.guestAuth) {
+            // Anonymous Solitary creation minted a throwaway guest account — apply its session and
+            // wait for the hub to reconnect under the new identity before navigating, so MatchPlay's
+            // upcoming joinRoomGroup call (which requires auth) doesn't race an in-flight reconnect.
+            this.auth.applyAuth(result.guestAuth);
+            await this.roomHub.disconnect();
+            await this.roomHub.connect();
+          }
 
           if (values.kind === 'solitary') {
             // A solitary room auto-starts synchronously inside the create call — if it's not

@@ -1,10 +1,12 @@
 export type RoomTopic = 'Math' | 'Geography' | 'Chemistry' | 'IcfesGeneral';
 export type RoomStatus = 'Waiting' | 'InProgress' | 'Finished';
-export type GameMode = 'multiple-choice' | 'calculation';
+export type GameMode = 'multiple-choice' | 'calculation' | 'flash-arithmetic';
 export type RoomKind = 'Multiplayer' | 'Solitary';
+export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 export const ROOM_TOPICS: RoomTopic[] = ['Math', 'Geography', 'Chemistry', 'IcfesGeneral'];
-export const GAME_MODES: GameMode[] = ['multiple-choice', 'calculation'];
+export const GAME_MODES: GameMode[] = ['multiple-choice', 'calculation', 'flash-arithmetic'];
+export const DIFFICULTIES: Difficulty[] = ['Easy', 'Medium', 'Hard'];
 
 export interface RoomSummary {
   id: string;
@@ -18,6 +20,7 @@ export interface RoomSummary {
   status: RoomStatus;
   isPrivate: boolean;
   kind: RoomKind;
+  difficulty: Difficulty;
 }
 
 export interface RoomPlayer {
@@ -38,6 +41,7 @@ export interface RoomDetail {
   status: RoomStatus;
   hostUserId: string;
   kind: RoomKind;
+  difficulty: Difficulty;
   players: RoomPlayer[];
 }
 
@@ -51,4 +55,5 @@ export interface CreateRoomRequest {
   isPrivate: boolean;
   gameMode: GameMode;
   kind: RoomKind;
+  difficulty: Difficulty;
 }

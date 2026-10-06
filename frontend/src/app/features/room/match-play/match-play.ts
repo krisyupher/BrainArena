@@ -14,13 +14,14 @@ import {
 } from '../../../core/models/match.model';
 import { MultipleChoicePanel } from './multiple-choice-panel/multiple-choice-panel';
 import { CalculationPanel } from './calculation-panel/calculation-panel';
+import { FlashArithmeticPanel } from './flash-arithmetic-panel/flash-arithmetic-panel';
 import { Chat } from '../chat/chat';
 import { CompetitorsPanel, CompetitorViewModel } from '../competitors-panel/competitors-panel';
 
 type Phase = 'countdown' | 'question' | 'reveal';
 
 @Component({
-  imports: [TranslocoPipe, MultipleChoicePanel, CalculationPanel, Chat, CompetitorsPanel],
+  imports: [TranslocoPipe, MultipleChoicePanel, CalculationPanel, FlashArithmeticPanel, Chat, CompetitorsPanel],
   selector: 'app-match-play',
   styleUrl: './match-play.scss',
   templateUrl: './match-play.html'
@@ -42,6 +43,19 @@ export class MatchPlay implements OnInit, OnDestroy {
   readonly errorMessage = signal<string | null>(null);
   /** Unknown until the room detail lookup resolves — the answer UI stays hidden until then. */
   readonly isParticipant = signal<boolean | null>(null);
+
+  /**
+   * Flash-arithmetic HUD state — lives here, not in FlashArithmeticPanel, because match-play.html
+   * mounts a fresh panel instance every time it switches between its question-panel and
+   * reveal-panel @if blocks (structural directives destroy/recreate on phase change). If this
+   * state lived in the panel it would silently reset to zero on every single reveal.
+   */
+  readonly mySubmittedAnswer = signal<number | null>(null);
+  readonly flashStreak = signal(0);
+  readonly flashBestStreak = signal(0);
+  private flashAnsweredCount = 0;
+  private flashCorrectCount = 0;
+  readonly flashAccuracy = signal(0);
 
   protected roomId!: string;
   private endsAt: Date | null = null;
@@ -107,6 +121,7 @@ export class MatchPlay implements OnInit, OnDestroy {
         this.currentQuestion.set(event);
         this.reveal.set(null);
         this.selectedOption.set(null);
+        this.mySubmittedAnswer.set(null);
         this.answerLocked.set(false);
         this.errorMessage.set(null);
         this.setEndsAt(new Date(event.endsAtUtc));
@@ -122,6 +137,23 @@ export class MatchPlay implements OnInit, OnDestroy {
         this.scoreboard.set(event.scoreboard);
         this.answerLocked.set(true);
         this.setEndsAt(new Date(event.endsAtUtc));
+
+        // Streak/accuracy tallying — the client already has both the player's own last submission
+        // and the revealed correct answer, so no new backend field is needed for these three.
+        if (event.kind === 'flash-arithmetic') {
+          const submitted = this.mySubmittedAnswer();
+          if (submitted !== null) {
+            this.flashAnsweredCount++;
+            if (submitted === event.correctNumericAnswer) {
+              this.flashCorrectCount++;
+              this.flashStreak.update((s) => s + 1);
+              this.flashBestStreak.update((b) => Math.max(b, this.flashStreak()));
+            } else {
+              this.flashStreak.set(0);
+            }
+            this.flashAccuracy.set(Math.round((this.flashCorrectCount / this.flashAnsweredCount) * 100));
+          }
+        }
       })
     );
 
@@ -166,6 +198,7 @@ export class MatchPlay implements OnInit, OnDestroy {
       return;
     }
 
+    this.mySubmittedAnswer.set(value);
     this.answerLocked.set(true);
 
     this.roomHub

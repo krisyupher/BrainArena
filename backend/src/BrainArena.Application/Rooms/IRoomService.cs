@@ -3,7 +3,13 @@ namespace BrainArena.Application.Rooms;
 public interface IRoomService
 {
     Task<IReadOnlyList<RoomSummaryDto>> GetOpenRoomsAsync(CancellationToken ct = default);
-    Task<RoomDetailDto> CreateRoomAsync(Guid hostUserId, CreateRoomRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// hostUserId is null for an anonymous caller — only permitted when request.Kind is Solitary,
+    /// in which case a throwaway guest account is created and CreateRoomResult.GuestAuth carries its
+    /// freshly-minted session. Every other Kind with a null hostUserId throws 401.
+    /// </summary>
+    Task<CreateRoomResult> CreateRoomAsync(Guid? hostUserId, CreateRoomRequest request, CancellationToken ct = default);
     Task<RoomDetailDto> JoinRoomAsync(Guid userId, Guid roomId, CancellationToken ct = default);
     Task LeaveRoomAsync(Guid userId, Guid roomId, CancellationToken ct = default);
     Task<RoomDetailDto> GetRoomByShareCodeAsync(string shareCode, CancellationToken ct = default);

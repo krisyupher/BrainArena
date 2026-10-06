@@ -21,7 +21,8 @@ public record QuestionClientPayload(
     string Kind,
     string Text,
     IReadOnlyList<string>? Options,
-    DateTimeOffset EndsAtUtc);
+    DateTimeOffset EndsAtUtc,
+    int? Level = null);
 
 public record ScoreboardEntry(Guid UserId, string DisplayName, int Score, bool IsConnected);
 

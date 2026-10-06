@@ -24,8 +24,11 @@ public class RoomServiceTests
         var rooms = new FakeRoomRepository();
         var notifier = new FakeRoomNotifier();
         var matchOrchestrator = new FakeMatchOrchestrator();
-        var gameModeRegistry = new GameModeRegistry([new MultipleChoiceGameMode(), new CalculationGameMode()]);
-        return (new RoomService(rooms, users, notifier, matchOrchestrator, gameModeRegistry), users, rooms, notifier, matchOrchestrator);
+        var gameModeRegistry = new GameModeRegistry([new MultipleChoiceGameMode(), new CalculationGameMode(), new FlashArithmeticGameMode()]);
+        var service = new RoomService(
+            rooms, users, notifier, matchOrchestrator, gameModeRegistry,
+            new FakePasswordHasher(), new FakeJwtTokenService());
+        return (service, users, rooms, notifier, matchOrchestrator);
     }
 
     [Fact]
@@ -34,7 +37,7 @@ public class RoomServiceTests
         var (service, users, _, notifier, _) = BuildService();
         var host = users.Seed("Host Hernandez");
 
-        var room = await service.CreateRoomAsync(host.Id, Request());
+        var room = (await service.CreateRoomAsync(host.Id, Request())).Room;
 
         var player = Assert.Single(room.Players);
         Assert.Equal(host.Id, player.UserId);
@@ -48,7 +51,7 @@ public class RoomServiceTests
         var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
 
-        var room = await service.CreateRoomAsync(host.Id, Request(isPrivate: true));
+        var room = (await service.CreateRoomAsync(host.Id, Request(isPrivate: true))).Room;
 
         Assert.False(string.IsNullOrWhiteSpace(room.ShareCode));
     }
@@ -59,7 +62,7 @@ public class RoomServiceTests
         var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
         var joiner = users.Seed();
-        var room = await service.CreateRoomAsync(host.Id, Request());
+        var room = (await service.CreateRoomAsync(host.Id, Request())).Room;
 
         var updated = await service.JoinRoomAsync(joiner.Id, room.Id);
 
@@ -72,7 +75,7 @@ public class RoomServiceTests
     {
         var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
-        var room = await service.CreateRoomAsync(host.Id, Request());
+        var room = (await service.CreateRoomAsync(host.Id, Request())).Room;
 
         var result = await service.JoinRoomAsync(host.Id, room.Id);
 
@@ -84,7 +87,7 @@ public class RoomServiceTests
     {
         var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
-        var room = await service.CreateRoomAsync(host.Id, Request(maxPlayers: 2));
+        var room = (await service.CreateRoomAsync(host.Id, Request(maxPlayers: 2))).Room;
         var secondPlayer = users.Seed();
         await service.JoinRoomAsync(secondPlayer.Id, room.Id);
 
@@ -100,9 +103,9 @@ public class RoomServiceTests
     {
         var (service, users, roomsRepo, _, _) = BuildService();
         var host = users.Seed();
-        var waitingRoom = await service.CreateRoomAsync(host.Id, Request());
+        var waitingRoom = (await service.CreateRoomAsync(host.Id, Request())).Room;
         var inProgressRoomHost = users.Seed();
-        var inProgressRoom = await service.CreateRoomAsync(inProgressRoomHost.Id, Request());
+        var inProgressRoom = (await service.CreateRoomAsync(inProgressRoomHost.Id, Request())).Room;
         (await roomsRepo.GetByIdAsync(inProgressRoom.Id))!.Status = RoomStatus.InProgress;
 
         var summaries = await service.GetOpenRoomsAsync();
@@ -128,7 +131,7 @@ public class RoomServiceTests
         var (service, users, _, _, _) = BuildService();
         var host = users.Seed();
         var other = users.Seed();
-        var room = await service.CreateRoomAsync(host.Id, Request());
+        var room = (await service.CreateRoomAsync(host.Id, Request())).Room;
         await service.JoinRoomAsync(other.Id, room.Id);
 
         await service.LeaveRoomAsync(other.Id, room.Id);
@@ -145,7 +148,7 @@ public class RoomServiceTests
         var host = users.Seed();
         var second = users.Seed();
         var third = users.Seed();
-        var room = await service.CreateRoomAsync(host.Id, Request(maxPlayers: 3));
+        var room = (await service.CreateRoomAsync(host.Id, Request(maxPlayers: 3))).Room;
         await service.JoinRoomAsync(second.Id, room.Id);
         await service.JoinRoomAsync(third.Id, room.Id);
 
@@ -162,7 +165,7 @@ public class RoomServiceTests
         var (service, users, roomsRepo, _, _) = BuildService();
         var host = users.Seed();
         var second = users.Seed();
-        var room = await service.CreateRoomAsync(host.Id, Request());
+        var room = (await service.CreateRoomAsync(host.Id, Request())).Room;
         await service.JoinRoomAsync(second.Id, room.Id);
         (await roomsRepo.GetByIdAsync(room.Id))!.Status = RoomStatus.InProgress;
 
@@ -179,8 +182,8 @@ public class RoomServiceTests
         var host = users.Seed();
 
         // A crafted payload trying to smuggle a many-player/private "solitary" room through.
-        var room = await service.CreateRoomAsync(
-            host.Id, Request(maxPlayers: 8, minPlayersToStart: 4, isPrivate: true, kind: RoomKind.Solitary));
+        var room = (await service.CreateRoomAsync(
+            host.Id, Request(maxPlayers: 8, minPlayersToStart: 4, isPrivate: true, kind: RoomKind.Solitary))).Room;
 
         Assert.Equal(1, room.MaxPlayers);
         Assert.Equal(1, room.MinPlayersToStart);
@@ -195,7 +198,7 @@ public class RoomServiceTests
         var (service, users, _, _, matchOrchestrator) = BuildService();
         var host = users.Seed();
 
-        var room = await service.CreateRoomAsync(host.Id, Request(kind: RoomKind.Solitary));
+        var room = (await service.CreateRoomAsync(host.Id, Request(kind: RoomKind.Solitary))).Room;
 
         Assert.Equal(1, matchOrchestrator.AutoStartAttempts);
         Assert.Equal(room.Id, matchOrchestrator.LastAutoStartRoomId);
@@ -210,5 +213,32 @@ public class RoomServiceTests
         await service.CreateRoomAsync(host.Id, Request());
 
         Assert.Equal(0, matchOrchestrator.AutoStartAttempts);
+    }
+
+    [Fact]
+    public async Task CreateRoomAsync_AnonymousCallerCreatingAMultiplayerRoom_Throws401()
+    {
+        var (service, _, _, _, _) = BuildService();
+
+        var exception = await Assert.ThrowsAsync<AppException>(
+            () => service.CreateRoomAsync(null, Request()));
+
+        Assert.Equal(401, exception.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateRoomAsync_AnonymousCallerCreatingASolitaryRoom_CreatesAGuestAccountAndReturnsItsAuth()
+    {
+        var (service, users, _, _, _) = BuildService();
+
+        var result = await service.CreateRoomAsync(null, Request(kind: RoomKind.Solitary));
+
+        Assert.NotNull(result.GuestAuth);
+        var guestId = result.GuestAuth!.UserId;
+        Assert.Equal(guestId, result.Room.HostUserId);
+        var player = Assert.Single(result.Room.Players);
+        Assert.Equal(guestId, player.UserId);
+        Assert.NotNull(await users.GetByIdAsync(guestId));
+        Assert.False(string.IsNullOrWhiteSpace(result.GuestAuth.Token));
     }
 }

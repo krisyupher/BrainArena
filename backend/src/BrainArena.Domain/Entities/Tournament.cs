@@ -14,6 +14,7 @@ public class Tournament
     public required string Name { get; set; }
     public RoomTopic Topic { get; set; }
     public string GameMode { get; set; } = "multiple-choice";
+    public Difficulty Difficulty { get; set; } = Difficulty.Medium;
     public int QuestionCount { get; set; }
     public int SecondsPerQuestion { get; set; }
 

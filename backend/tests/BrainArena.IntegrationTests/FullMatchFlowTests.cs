@@ -42,7 +42,7 @@ public class FullMatchFlowTests(IntegrationTestFactory factory) : IClassFixture<
             isPrivate = false
         });
         createResponse.EnsureSuccessStatusCode();
-        var room = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var room = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("room");
         var roomId = room.GetProperty("id").GetGuid();
 
         await using var hostConn = BuildHubConnection(host.Token);

@@ -13,6 +13,7 @@ public class TournamentConfiguration : IEntityTypeConfiguration<Tournament>
         builder.Property(t => t.Name).IsRequired().HasMaxLength(40);
         builder.Property(t => t.Topic).HasConversion<string>().HasMaxLength(20);
         builder.Property(t => t.GameMode).IsRequired().HasMaxLength(30);
+        builder.Property(t => t.Difficulty).HasConversion<string>().HasMaxLength(20);
         builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
 
         builder.HasOne(t => t.CreatorUser)

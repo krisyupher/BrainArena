@@ -41,6 +41,26 @@ public interface IGameMode
     /// to the orchestrator.
     /// </summary>
     ScoreResult EvaluateAnswer(MatchQuestion matchQuestion, SubmittedAnswer answer, TimeSpan timeRemaining, TimeSpan timeLimit);
+
+    /// <summary>
+    /// True for modes whose round content must be decided one round at a time instead of all
+    /// upfront — e.g. FlashArithmeticGameMode's Solitary live-adaptive difficulty, where round N+1
+    /// depends on whether round N was answered correctly. Default interface method so existing
+    /// modes need zero changes: false means MatchOrchestrator keeps using PrepareQuestionsAsync's
+    /// upfront list exactly as before.
+    /// </summary>
+    bool RequiresIncrementalGeneration(Room room) => false;
+
+    /// <summary>
+    /// Only called when RequiresIncrementalGeneration is true. currentAdaptiveState/
+    /// previousAnswerWasCorrect are opaque to MatchOrchestrator — only the mode itself assigns
+    /// meaning to them (for FlashArithmeticGameMode, the adaptive state is the current Level).
+    /// previousAnswerWasCorrect == null signals the very first round of the match, in which case
+    /// the mode should reset to its own baseline regardless of currentAdaptiveState.
+    /// </summary>
+    Task<(Question Question, int NextAdaptiveState)> PrepareNextQuestionAsync(
+        Room room, int currentAdaptiveState, bool? previousAnswerWasCorrect, IQuestionRepository questionRepo, CancellationToken ct)
+        => throw new NotSupportedException($"{ModeKey} does not support incremental generation.");
 }
 
 public interface IGameModeRegistry

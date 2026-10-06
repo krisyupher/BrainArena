@@ -45,7 +45,7 @@ public class SolitaryMatchFlowTests(IntegrationTestFactory factory) : IClassFixt
             kind = "Solitary"
         });
         createResponse.EnsureSuccessStatusCode();
-        var room = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var room = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("room");
 
         Assert.Equal("InProgress", room.GetProperty("status").GetString());
         Assert.Equal(1, room.GetProperty("maxPlayers").GetInt32());

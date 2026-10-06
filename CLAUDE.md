@@ -403,3 +403,82 @@ The Api globally registers a `JsonStringEnumConverter` for MVC responses (`Progr
 test that round-trips a DTO with an enum property needs its own `JsonSerializerOptions` with that
 converter explicitly added (see `RoomJoinFlowTests`/`FullMatchFlowTests` for the pattern). SignalR
 hub payloads sidestep this entirely since none of the hub DTOs carry enum properties.
+
+### Flash Mental Arithmetic: a third `IGameMode`, with live-adaptive difficulty in Solitary only
+
+`FlashArithmeticGameMode` (`Key = "flash-arithmetic"`) flashes a sequence of 1-2 digit numbers one
+at a time (large white number, black screen between, frontend-only pacing); the player types the
+sum once they're all shown. Works in Multiplayer, Tournament, and Solitary rooms like every other
+mode — but Solitary's difficulty **adapts live** round to round (rises on a correct answer, drops
+on a miss), while Multiplayer/Tournament use a **fixed** difficulty for the whole match, chosen
+once at creation, identical for every player — a hard fairness requirement.
+
+**The JIT question-generation engine.** `MatchOrchestrator.StartMatchAsync` used to always call
+`IGameMode.PrepareQuestionsAsync` once, building every round upfront — impossible for live-adaptive
+difficulty, since round N+1's content depends on whether round N was answered correctly. `IGameMode`
+gained two members as **C# default interface methods**, so `MultipleChoiceGameMode`/
+`CalculationGameMode` needed zero changes: `RequiresIncrementalGeneration(Room room) => false` and
+`PrepareNextQuestionAsync(room, currentAdaptiveState, previousAnswerWasCorrect, ...)`.
+`FlashArithmeticGameMode.RequiresIncrementalGeneration` returns true only for `RoomKind.Solitary`;
+Multiplayer/Tournament flash-arithmetic rooms still take the ordinary upfront path, generating every
+round at the same fixed Level. `previousAnswerWasCorrect == null` signals round 0, telling the mode
+to reset to its own baseline Level regardless of whatever placeholder state was passed in.
+
+`MatchRuntimeState` (`Api/Matches/`) grew `Topic`/`Difficulty`/`TargetQuestionCount` (all cached
+once from `Room` in `StartMatchAsync`) and a mutable `AdaptiveState` int. `RunMatchLoopAsync`
+generates round `i` on demand (`MatchOrchestrator.GenerateNextRoundAsync`, its own DB scope, same
+pattern as `FinalizeMatchAsync`) whenever `i >= state.Questions.Count`; for the two upfront modes
+that branch never fires, so behavior is unchanged. **Deliberately does not re-fetch `Room`** inside
+that per-round loop — Topic/Difficulty are cached on `MatchRuntimeState` instead, avoiding both an
+extra DB round-trip per round and a third occurrence of the EF Core stale-read trap already
+documented above (Mini-tournaments, "Rooms have a Kind"). A **real pre-existing bug fixed as part of
+this refactor**, not just avoided: `RunMatchLoopAsync`/`Join`/`Snapshot` all used
+`state.Questions.Count` as a payload's `totalQuestions` — harmless for the two upfront modes
+(populated from round 0), but for incremental generation `Questions.Count` starts at 1 and grows, so
+a Solitary player would have seen "Question 1 of 1", then "2 of 2", etc. All three call sites now use
+the new `state.TargetQuestionCount` instead, which is set once from `room.QuestionCount` and never
+changes.
+
+**Level lives on the existing `Question.Difficulty` int**, repurposed as the per-round numeric Level
+carrier (previously dead weight for calculation-mode questions) — not to be confused with the new
+`Domain.Enums.Difficulty` (`Easy`/`Medium`/`Hard`), a *different* room-level concept: for
+Multiplayer/Tournament it's the fixed Level for the whole match, for Solitary it's only the
+*starting* Level before the engine takes over. `Room.Difficulty`/`Tournament.Difficulty` mirror how
+`Tournament` already duplicates `GameMode`/`Topic`/`QuestionCount` for the same reason
+(`TournamentService.CreateNextRoundAsync`'s `new Room {...}` pulls from `tournament.*`).
+`QuestionClientPayload` grew a trailing optional `int? Level` populated only by this mode.
+
+**Anonymous Solitary play**: every Room/Match player row is a NOT NULL FK to a real `Users` row, so
+true anonymous play needed a real user to hang off of. `RoomsController.Create` is `[AllowAnonymous]`
+using `User.GetUserIdOrNull()`; `RoomService.CreateRoomAsync`'s signature is `Guid? hostUserId` ->
+`Task<CreateRoomResult>` (`record CreateRoomResult(RoomDetailDto Room, AuthResponse? GuestAuth)`). A
+null `hostUserId` throws 401 unless `request.Kind == RoomKind.Solitary`, in which case `RoomService`
+(now also depending on `IPasswordHasher`/`IJwtTokenService`, exactly like `AuthService.BuildResponse`
+does) creates a throwaway `User` (`guest-{guid}@guest.brainarena.local`) and mints it a real JWT —
+from that point on the guest is a completely ordinary authenticated user, same hub auth as anyone
+else. Frontend: `AuthService.applyAuth` (was `private`) is now public so `CreateGameForm` can apply
+`guestAuth` the same way login/register do; it then **explicitly `await roomHub.disconnect(); await
+roomHub.connect();`** before navigating — `MatchPlay.ngOnInit`'s `joinRoomGroup` call is
+`[Authorize]`-gated and fires almost immediately after navigation, and `App`'s reactive
+auth-effect reconnect alone gives no guarantee the hub has finished reconnecting under the new
+identity by then (the hub service's own single-flight/idempotency guards make the explicit await and
+that reactive effect converge safely rather than double-connecting).
+
+**Frontend panel** (`features/room/match-play/flash-arithmetic-panel/`) mirrors
+`calculation-panel.ts`'s patterns (effect-driven reset on a new `question()` input by identity,
+`FormControl.disable()`/`.enable()` rather than a template `[disabled]` binding). Runs its own
+`setTimeout`-chain flash animation (`stage` signal: `'flash' | 'gap' | 'input'`) that speeds up as
+Level rises — frontend-only, mirrored from the payload's `Level` field, never affecting the
+server-authoritative answer deadline. The flash stage's `#000`/`#fff` colors are **hardcoded, not
+theme tokens** — deliberately opting out of the light/dark theme system since the mechanic depends on
+stark black/white contrast for fast number recognition. **Level/Streak/BestStreak/Accuracy HUD state
+lives in `MatchPlay`, not the panel** — `match-play.html` mounts the question-panel and reveal-panel
+in separate top-level `@if` blocks, and Angular's `@if` is structural (destroys/recreates on
+transition), so a fresh panel instance is created on every single reveal; owning the HUD state there
+would have silently zeroed it every round. `MatchPlay` tallies streak/accuracy itself in its
+`questionRevealed` subscription, comparing its own `mySubmittedAnswer` signal against the revealed
+correct answer (both already client-side; no new backend field needed). **`match-play.html`'s shared
+`<h2>{{ q.text }}</h2>`** (rendered above every mode's panel) is guarded with
+`@if (q.kind !== 'flash-arithmetic')` in both the question and reveal blocks — for this mode
+`q.text` is the raw flashed number sequence, and rendering it unconditionally would have printed the
+answer as a plain heading the instant the question started.

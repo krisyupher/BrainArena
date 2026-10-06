@@ -72,9 +72,16 @@
     "gameMode": "Game mode",
     "gameModeOption": {
       "multiple-choice": "Multiple choice",
-      "calculation": "Calculation"
+      "calculation": "Calculation",
+      "flash-arithmetic": "Flash mental arithmetic"
     },
     "topic": "Topic",
+    "difficulty": "Difficulty",
+    "difficultyOption": {
+      "Easy": "Easy",
+      "Medium": "Medium",
+      "Hard": "Hard"
+    },
     "maxPlayers": "Max players",
     "minPlayersToStart": "Min players to start",
     "questionCount": "Number of questions",
@@ -111,7 +118,14 @@
     "backToLobby": "Back to rooms",
     "numericAnswerPlaceholder": "Your answer",
     "submitAnswer": "Submit",
-    "correctAnswerWas": "The correct answer was"
+    "correctAnswerWas": "The correct answer was",
+    "flash": {
+      "level": "Level",
+      "streak": "Streak",
+      "bestStreak": "Best streak",
+      "accuracy": "Accuracy",
+      "sumPlaceholder": "Sum of the numbers"
+    }
   },
   "admin": {
     "eyebrow": "Game Master",
