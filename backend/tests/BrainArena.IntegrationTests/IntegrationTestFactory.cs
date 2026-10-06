@@ -47,6 +47,9 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, Xunit.IAsy
         await dropCmd.ExecuteNonQueryAsync();
     }
 
+    /// <summary>Per-fixture config overrides, applied on top of the defaults below (later source wins).</summary>
+    protected virtual IReadOnlyDictionary<string, string?> ConfigOverrides => new Dictionary<string, string?>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((_, config) =>
@@ -60,8 +63,19 @@ public class IntegrationTestFactory : WebApplicationFactory<Program>, Xunit.IAsy
                 // Keep the fixed countdown/reveal overhead low — the per-question answer window
                 // itself (10-60s) is a real product rule (RoomValidation) and stays untouched.
                 ["MatchTiming:CountdownSeconds"] = "1",
-                ["MatchTiming:RevealSeconds"] = "1"
+                ["MatchTiming:RevealSeconds"] = "1",
+                // Every TestServer request shares one "unknown" client IP, so real limits would
+                // throttle ordinary suites; RateLimitingTests opts back into small ones.
+                ["RateLimiting:Auth:TokenLimit"] = "100000",
+                ["RateLimiting:Auth:TokensPerMinute"] = "100000",
+                ["RateLimiting:GuestCreation:TokenLimit"] = "100000",
+                ["RateLimiting:GuestCreation:TokensPerMinute"] = "100000",
+                ["RateLimiting:RoomCreation:TokenLimit"] = "100000",
+                ["RateLimiting:RoomCreation:TokensPerMinute"] = "100000",
+                // GuestAccountTests drives IGuestCleanup directly instead of waiting on the timer.
+                ["GuestCleanup:Enabled"] = "false"
             });
+            config.AddInMemoryCollection(ConfigOverrides);
         });
     }
 }

@@ -1,9 +1,12 @@
+using BrainArena.Api.Auth;
 using BrainArena.Api.Extensions;
+using BrainArena.Api.RateLimiting;
 using BrainArena.Application.Chat;
 using BrainArena.Application.Matches;
 using BrainArena.Application.Rooms;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BrainArena.Api.Controllers;
 
@@ -30,6 +33,7 @@ public class RoomsController(
     }
 
     [HttpGet("by-code/{code}")]
+    [Authorize(Policy = AuthPolicies.RegisteredUser)]
     public async Task<ActionResult<RoomDetailDto>> GetByCode(string code, CancellationToken ct)
     {
         return Ok(await roomService.GetRoomByShareCodeAsync(code, ct));
@@ -37,6 +41,7 @@ public class RoomsController(
 
     [HttpPost]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.RoomCreation)]
     public async Task<ActionResult<CreateRoomResult>> Create(CreateRoomRequest request, CancellationToken ct)
     {
         var result = await roomService.CreateRoomAsync(User.GetUserIdOrNull(), request, ct);
@@ -44,6 +49,7 @@ public class RoomsController(
     }
 
     [HttpPost("{id:guid}/join")]
+    [Authorize(Policy = AuthPolicies.RegisteredUser)]
     public async Task<ActionResult<RoomDetailDto>> Join(Guid id, CancellationToken ct)
     {
         return Ok(await roomService.JoinRoomAsync(User.GetUserId(), id, ct));

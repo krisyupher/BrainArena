@@ -2,6 +2,7 @@
   "app": {
     "title": "BrainArena",
     "logout": "Log out",
+    "createAccount": "Create account",
     "admin": "Admin",
     "settings": "Settings",
     "themeLight": "Switch to light mode",

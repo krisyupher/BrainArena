@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { RoomService } from '../../../core/services/room.service';
@@ -18,7 +18,7 @@ const GAME_KINDS: GameKind[] = ['solitary', 'multiplayer', 'tournament'];
   styleUrl: './create-game-form.scss',
   templateUrl: './create-game-form.html'
 })
-export class CreateGameForm {
+export class CreateGameForm implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly roomService = inject(RoomService);
   private readonly tournamentService = inject(TournamentService);
@@ -34,7 +34,8 @@ export class CreateGameForm {
   readonly tournamentCreated = output<string>();
   readonly cancelled = output<void>();
 
-  readonly kinds = GAME_KINDS;
+  /** Without a real account (anonymous or a guest session) only Solitary practice is playable. */
+  readonly kinds = computed<GameKind[]>(() => (this.auth.isRegistered() ? GAME_KINDS : ['solitary']));
   readonly topics = ROOM_TOPICS;
   readonly gameModes = GAME_MODES;
   readonly difficulties = DIFFICULTIES;
@@ -44,7 +45,7 @@ export class CreateGameForm {
   private createdRoomId: string | null = null;
 
   readonly form = this.fb.nonNullable.group({
-    kind: this.initialKind() as GameKind,
+    kind: 'multiplayer' as GameKind,
     gameMode: ['multiple-choice' as GameMode, [Validators.required]],
     topic: ['Math' as RoomTopic, [Validators.required]],
     questionCount: [10, [Validators.required, Validators.min(5), Validators.max(20)]],
@@ -68,8 +69,13 @@ export class CreateGameForm {
     return this.form.controls.gameMode.value === 'flash-arithmetic';
   }
 
+  ngOnInit(): void {
+    // Not in the form's field initializer: signal inputs aren't bound yet when those run.
+    this.setKind(this.initialKind());
+  }
+
   setKind(kind: GameKind): void {
-    this.form.controls.kind.setValue(kind);
+    this.form.controls.kind.setValue(this.kinds().includes(kind) ? kind : 'solitary');
   }
 
   submit(): void {

@@ -240,5 +240,30 @@ public class RoomServiceTests
         Assert.Equal(guestId, player.UserId);
         Assert.NotNull(await users.GetByIdAsync(guestId));
         Assert.False(string.IsNullOrWhiteSpace(result.GuestAuth.Token));
+        Assert.Equal(nameof(UserRole.Guest), result.GuestAuth.Role);
+    }
+
+    [Fact]
+    public async Task CreateRoomAsync_GuestCreatingAMultiplayerRoom_Throws403()
+    {
+        var (service, _, _, _, _) = BuildService();
+        var guestId = (await service.CreateRoomAsync(null, Request(kind: RoomKind.Solitary))).GuestAuth!.UserId;
+
+        var exception = await Assert.ThrowsAsync<AppException>(
+            () => service.CreateRoomAsync(guestId, Request(kind: RoomKind.Multiplayer)));
+
+        Assert.Equal(403, exception.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateRoomAsync_GuestStartingAnotherPracticeRoom_IsAllowedWithoutMintingAnotherGuest()
+    {
+        var (service, _, _, _, _) = BuildService();
+        var guestId = (await service.CreateRoomAsync(null, Request(kind: RoomKind.Solitary))).GuestAuth!.UserId;
+
+        var second = await service.CreateRoomAsync(guestId, Request(kind: RoomKind.Solitary));
+
+        Assert.Null(second.GuestAuth);
+        Assert.Equal(guestId, second.Room.HostUserId);
     }
 }

@@ -1,3 +1,5 @@
+# Full stack:         docker compose up -d --build    -> app on http://localhost:8080
+# Database only (for local dev with `dotnet run` + `npm start`):  docker compose up -d postgres
 services:
   postgres:
     image: postgres:16-alpine
@@ -15,6 +17,28 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # Not published to the host on purpose: it's only reachable through `web`'s nginx, which is what
+  # makes trusting its X-Forwarded-For header (for per-client rate limiting) safe.
+  api:
+    build: ./backend
+    container_name: brainarena-api
+    environment:
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=brainarena;Username=brainarena;Password=brainarena_dev_password;GSS Encryption Mode=Disable
+      ForwardedHeaders__Enabled: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    container_name: brainarena-web
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
 
 volumes:
   brainarena-postgres-data:

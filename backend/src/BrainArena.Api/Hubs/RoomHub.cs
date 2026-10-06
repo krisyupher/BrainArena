@@ -1,3 +1,4 @@
+using BrainArena.Api.Auth;
 using BrainArena.Api.Extensions;
 using BrainArena.Application.Abstractions;
 using BrainArena.Application.Chat;
@@ -140,7 +141,7 @@ public class RoomHub(
     public Task LeaveSpectatorGroup(Guid roomId) =>
         Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(roomId));
 
-    [Authorize]
+    [Authorize(Policy = AuthPolicies.RegisteredUser)]
     public async Task StartNow(Guid roomId)
     {
         try
@@ -175,10 +176,10 @@ public class RoomHub(
     }
 
     /// <summary>
-    /// Mounted on every room-lifecycle page (waiting room, match-play, results) for any signed-in
+    /// Mounted on every room-lifecycle page (waiting room, match-play, results) for any registered
     /// caller, participant or spectator — chat is no longer disabled during questions (Phase 7).
     /// </summary>
-    [Authorize]
+    [Authorize(Policy = AuthPolicies.RegisteredUser)]
     public async Task SendChatMessage(Guid roomId, string text)
     {
         ChatMessageDto message;
@@ -194,7 +195,7 @@ public class RoomHub(
         await Clients.Group(RoomGroupName(roomId)).SendAsync("ChatMessageReceived", message);
     }
 
-    [Authorize]
+    [Authorize(Policy = AuthPolicies.RegisteredUser)]
     public async Task ReportChatMessage(Guid messageId)
     {
         try
@@ -212,10 +213,10 @@ public class RoomHub(
     /// <summary>
     /// A small fixed-emoji reaction, targeted at a competitor tile — ephemeral (never persisted),
     /// broadcast to the whole room group so everyone sees the same animated burst. Same "any
-    /// signed-in user, player or spectator" gating as chat; no room-membership check since it's
+    /// registered user, player or spectator" gating as chat; no room-membership check since it's
     /// low-stakes and cosmetic only.
     /// </summary>
-    [Authorize]
+    [Authorize(Policy = AuthPolicies.RegisteredUser)]
     public async Task SendReaction(Guid roomId, Guid targetUserId, string emoji)
     {
         try

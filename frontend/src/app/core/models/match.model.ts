@@ -14,6 +14,21 @@ export interface QuestionStartedEvent {
   level: number | null;
 }
 
+/** One server-paced flash-arithmetic number — the sequence is never sent ahead of its display moment. */
+export interface FlashNumberEvent {
+  matchQuestionId: string;
+  position: number;
+  count: number;
+  value: number;
+  visibleMs: number;
+}
+
+/** Answering (and the speed-bonus clock) opens only after the last flashed number. */
+export interface AnswerWindowOpenedEvent {
+  matchQuestionId: string;
+  endsAtUtc: string;
+}
+
 export interface ScoreboardEntry {
   userId: string;
   displayName: string;
@@ -58,7 +73,8 @@ export interface MatchEndedEvent {
   review: QuestionReviewEntry[];
 }
 
-export type MatchPhase = 'Countdown' | 'Question' | 'Reveal';
+/** 'Flash' = a flash-arithmetic question whose numbers are still being shown; answering isn't open yet. */
+export type MatchPhase = 'Countdown' | 'Flash' | 'Question' | 'Reveal';
 
 export interface MatchResyncEvent {
   matchId: string;

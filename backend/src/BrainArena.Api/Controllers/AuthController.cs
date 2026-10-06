@@ -1,10 +1,13 @@
+using BrainArena.Api.RateLimiting;
 using BrainArena.Application.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BrainArena.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting(RateLimitPolicies.Auth)]
 public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("register")]

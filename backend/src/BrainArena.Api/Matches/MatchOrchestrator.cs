@@ -76,6 +76,11 @@ public class MatchOrchestrator(
             throw new AppException("No active match for this room.", 404);
         }
 
+        if (state.Phase == MatchPhase.Flash)
+        {
+            throw new AppException("Wait until every number has been shown.", 409);
+        }
+
         if (state.Phase != MatchPhase.Question)
         {
             throw new AppException("This question is closed.", 409);
@@ -102,8 +107,13 @@ public class MatchOrchestrator(
         // EvaluateAnswer validates the shape (e.g. an option index in range) itself — that check
         // belongs to whichever mode defines the shape, not to the orchestrator.
         var result = state.GameMode.EvaluateAnswer(current.MatchQuestion, answer, timeRemaining, timeLimit);
+        var timeTaken = timeLimit - timeRemaining;
+        if (timeTaken < TimeSpan.Zero)
+        {
+            timeTaken = TimeSpan.Zero;
+        }
 
-        if (!current.Answers.TryAdd(userId, new PlayerAnswerRuntime(answer, result.Points, result.IsCorrect)))
+        if (!current.Answers.TryAdd(userId, new PlayerAnswerRuntime(answer, result.Points, result.IsCorrect, timeTaken)))
         {
             throw new AppException("You already answered this question.", 409);
         }
@@ -138,9 +148,9 @@ public class MatchOrchestrator(
 
         return state.Phase switch
         {
-            MatchPhase.Question => new MatchResyncPayload(
+            MatchPhase.Question or MatchPhase.Flash => new MatchResyncPayload(
                 state.MatchId,
-                "Question",
+                state.Phase.ToString(),
                 state.GameMode.ToClientPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.TargetQuestionCount, state.PhaseEndsAtUtc),
                 null,
                 player.Score,
@@ -168,9 +178,9 @@ public class MatchOrchestrator(
 
         return state.Phase switch
         {
-            MatchPhase.Question => new MatchSpectatorSyncPayload(
+            MatchPhase.Question or MatchPhase.Flash => new MatchSpectatorSyncPayload(
                 state.MatchId,
-                "Question",
+                state.Phase.ToString(),
                 state.GameMode.ToClientPayload(state.CurrentQuestion.MatchQuestion, state.CurrentIndex, state.TargetQuestionCount, state.PhaseEndsAtUtc),
                 null,
                 scoreboard),
@@ -265,9 +275,16 @@ public class MatchOrchestrator(
 
             await db.SaveChangesAsync(ct);
 
-            var runtimePlayers = room.Players.ToDictionary(
-                p => p.UserId,
-                p => new PlayerRuntime { UserId = p.UserId, DisplayName = p.User?.DisplayName ?? string.Empty });
+            var runtimePlayers = room.Players
+                .OrderBy(p => p.JoinedAt)
+                .ThenBy(p => p.UserId)
+                .Select((p, joinOrder) => new PlayerRuntime
+                {
+                    UserId = p.UserId,
+                    DisplayName = p.User?.DisplayName ?? string.Empty,
+                    JoinOrder = joinOrder
+                })
+                .ToDictionary(p => p.UserId);
 
             var state = new MatchRuntimeState
             {
@@ -314,12 +331,36 @@ public class MatchOrchestrator(
 
                 state.CurrentIndex = i;
                 var current = state.Questions[i];
-                var endsAt = DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(state.SecondsPerQuestion));
+                var answerWindow = TimeSpan.FromSeconds(state.SecondsPerQuestion);
+                var flash = state.GameMode.GetFlashSequence(current.MatchQuestion);
+
+                if (flash is not null)
+                {
+                    // Answering — and with it the speed-bonus clock — only opens after the last number.
+                    var projectedEndsAt = DateTimeOffset.UtcNow + flash.TotalDuration + answerWindow;
+                    state.PhaseEndsAtUtc = projectedEndsAt;
+                    state.Phase = MatchPhase.Flash;
+                    await hub.Clients.Group(groupName).SendAsync(
+                        "QuestionStarted",
+                        state.GameMode.ToClientPayload(current.MatchQuestion, i, state.TargetQuestionCount, projectedEndsAt));
+                    await RunFlashSequenceAsync(groupName, current.MatchQuestion.Id, flash);
+                }
+
+                var endsAt = DateTimeOffset.UtcNow + answerWindow;
                 state.PhaseEndsAtUtc = endsAt;
                 state.Phase = MatchPhase.Question;
 
-                var payload = state.GameMode.ToClientPayload(current.MatchQuestion, i, state.TargetQuestionCount, endsAt);
-                await hub.Clients.Group(groupName).SendAsync("QuestionStarted", payload);
+                if (flash is null)
+                {
+                    await hub.Clients.Group(groupName).SendAsync(
+                        "QuestionStarted",
+                        state.GameMode.ToClientPayload(current.MatchQuestion, i, state.TargetQuestionCount, endsAt));
+                }
+                else
+                {
+                    await hub.Clients.Group(groupName).SendAsync(
+                        "AnswerWindowOpened", new AnswerWindowOpenedPayload(current.MatchQuestion.Id, endsAt));
+                }
 
                 var remaining = endsAt - DateTimeOffset.UtcNow;
                 if (remaining > TimeSpan.Zero)
@@ -345,6 +386,20 @@ public class MatchOrchestrator(
         {
             logger.LogError(ex, "Match loop for room {RoomId} failed", roomId);
             _matches.TryRemove(roomId, out _);
+        }
+    }
+
+    private async Task RunFlashSequenceAsync(string groupName, Guid matchQuestionId, FlashSequence flash)
+    {
+        var visibleMs = (int)flash.VisibleFor.TotalMilliseconds;
+        for (var position = 0; position < flash.Numbers.Count; position++)
+        {
+            await hub.Clients.Group(groupName).SendAsync(
+                "FlashNumber",
+                new FlashNumberPayload(matchQuestionId, position, flash.Numbers.Count, flash.Numbers[position], visibleMs));
+
+            var isLast = position == flash.Numbers.Count - 1;
+            await Task.Delay(isLast ? flash.VisibleFor : flash.VisibleFor + flash.GapAfter);
         }
     }
 
@@ -390,8 +445,7 @@ public class MatchOrchestrator(
 
     private async Task FinalizeMatchAsync(MatchRuntimeState state)
     {
-        var ranked = state.Players.Values
-            .OrderByDescending(p => p.Score)
+        var ranked = state.RankedPlayers()
             .Select((p, index) => new RankingEntry(p.UserId, p.DisplayName, p.Score, index + 1))
             .ToList();
 

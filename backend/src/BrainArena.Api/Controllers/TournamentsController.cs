@@ -1,3 +1,4 @@
+using BrainArena.Api.Auth;
 using BrainArena.Api.Extensions;
 using BrainArena.Application.Tournaments;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ namespace BrainArena.Api.Controllers;
 
 [ApiController]
 [Route("api/tournaments")]
-[Authorize]
+[Authorize(Policy = AuthPolicies.RegisteredUser)]
 public class TournamentsController(ITournamentService tournamentService) : ControllerBase
 {
     [HttpGet]

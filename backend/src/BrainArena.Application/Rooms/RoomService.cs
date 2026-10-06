@@ -35,10 +35,10 @@ public class RoomService(
 
         if (hostUserId is null)
         {
-            // Anonymous caller — only allowed for a Solitary practice room (Multiplayer/Tournament
-            // still require a real sign-in). Auto-create a throwaway guest account and mint it a
-            // real JWT so the caller leaves this request as a completely ordinary authenticated
-            // user from every other part of the app's perspective.
+            // Anonymous caller — only allowed for a Solitary practice room. Auto-create a throwaway
+            // Guest-role account and mint it a real JWT: enough to play its own practice rooms, but
+            // the RegisteredUser policy keeps it out of everything shared (multiplayer, tournaments,
+            // chat, reactions), which is also what lets GuestCleanup delete it safely later.
             if (request.Kind != RoomKind.Solitary)
             {
                 throw new AppException("Sign in to create this room.", 401);
@@ -50,7 +50,7 @@ public class RoomService(
                 Email = $"guest-{Guid.NewGuid():N}@guest.brainarena.local",
                 DisplayName = "Guest",
                 PasswordHash = string.Empty,
-                Role = UserRole.Player,
+                Role = UserRole.Guest,
                 CreatedAt = DateTimeOffset.UtcNow
             };
             guest.PasswordHash = passwordHasher.Hash(guest, Guid.NewGuid().ToString("N"));
@@ -65,6 +65,11 @@ public class RoomService(
         {
             host = await users.GetByIdAsync(hostUserId.Value, ct)
                 ?? throw new AppException("Host user not found.", 404);
+
+            if (host.Role == UserRole.Guest && request.Kind != RoomKind.Solitary)
+            {
+                throw new AppException("Create an account to play multiplayer.", 403);
+            }
         }
 
         // A solitary practice room is always exactly 1/1 and never shareable — force these

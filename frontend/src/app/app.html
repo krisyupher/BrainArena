@@ -64,6 +64,11 @@
           </button>
 
           @if (auth.isAuthenticated()) {
+            @if (auth.isGuest()) {
+              <a routerLink="/register" class="dropdown-item" (click)="dropdownOpen.set(false)">
+                {{ 'app.createAccount' | transloco }}
+              </a>
+            }
             @if (auth.isAdmin()) {
               <a routerLink="/admin" class="dropdown-item" (click)="dropdownOpen.set(false)">
                 {{ 'app.admin' | transloco }}

@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IGuestCleanup, GuestCleanup>();
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
         services.AddScoped<IChatRepository, ChatRepository>();

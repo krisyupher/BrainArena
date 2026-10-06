@@ -11,11 +11,11 @@
       <span class="flash-number">{{ currentNumber() }}</span>
     } @else if (stage() === 'input') {
       @if (canAnswer()) {
-        <form class="numeric-form" (ngSubmit)="submit()">
+        <form class="numeric-form" [formGroup]="answerForm" (ngSubmit)="submit()">
           <input
             type="number"
             inputmode="decimal"
-            [formControl]="answerControl"
+            formControlName="answer"
             [placeholder]="'match.flash.sumPlaceholder' | transloco"
           />
           <button type="submit" [disabled]="answerLocked() || answerControl.invalid">

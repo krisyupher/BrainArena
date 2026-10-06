@@ -3,8 +3,8 @@
 Real-time multiplayer quiz competitions in rooms. Angular + ASP.NET Core (SignalR) + PostgreSQL.
 
 Built in phases per the project brief, then extended well past it — the original four phases are
-done, and the app has grown a second game mode, spectating, tournaments, solo practice, and a
-full visual/theming redesign on top:
+done, and the app has grown two more game modes, spectating, tournaments, solo practice (no
+account needed), and a full visual/theming redesign on top:
 
 - **Phase 1 — accounts and lobby**: register/login (JWT), a lobby that lists open rooms live
   (via SignalR) with a "Create room" form.
@@ -43,23 +43,54 @@ full visual/theming redesign on top:
   tabbed lobby page. Room/tournament names are auto-generated from the game mode and topic instead
   of typed. The header collapsed into a single settings dropdown (language, light/dark theme,
   admin link, logout), and the app now supports a light theme alongside the dark default.
+- **Phase 12 — flash mental arithmetic**: a third game mode — numbers flash on screen one at a
+  time and you type their sum. Works in multiplayer rooms, tournaments, and solo practice, with an
+  Easy/Medium/Hard difficulty picked at creation. In multiplayer and tournaments the difficulty is
+  fixed and every player sees the same numbers; in solo practice the level adapts live (up after a
+  correct answer, down after a miss), with a level/streak/best-streak/accuracy HUD. Solo practice
+  no longer needs an account — starting one anonymously creates a throwaway guest session behind
+  the scenes.
+- **Phase 13 — fair play and abuse hardening**: flash-arithmetic numbers are streamed by the server
+  one at a time, so the full sequence never reaches the browser early, and answering (with its
+  speed bonus) only opens after the last number. Ties in the final standings follow a fixed rule
+  (more correct answers, then faster correct answers, then join order) instead of falling out
+  arbitrarily — this decides who advances in a tournament. Login, registration and room creation
+  are rate-limited. Guest sessions are practice-only (multiplayer, tournaments, chat and reactions
+  need a real account) and are deleted automatically once they expire.
 
 ## Prerequisites
 
 - [.NET SDK 10](https://dotnet.microsoft.com/download) or later
 - [Node.js 20+](https://nodejs.org/) and npm
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for Postgres via
-  `docker compose up -d` — the integration tests also need it running, since they create a
+  `docker compose up -d postgres` — the integration tests also need it running, since they create a
   disposable database on that same Postgres instance)
 
-## Running locally
+## Running everything with Docker
 
-Three pieces, three terminals:
+One command builds and starts the database, the API and the frontend together:
+
+```bash
+docker compose up -d --build
+```
+
+Then open `http://localhost:8080` (set `WEB_PORT` to use another port, e.g.
+`WEB_PORT=4300 docker compose up -d --build`). nginx serves the Angular app and forwards `/api`
+and `/hubs` (including SignalR WebSockets) to the API container, which migrates and seeds the
+database on startup. The API itself isn't exposed on the host. Follow logs with
+`docker compose logs -f api`, and stop everything with `docker compose down` (add `-v` to also
+wipe the database volume). This uses the same Postgres container and data volume as the local-dev
+setup below.
+
+## Running locally (for development)
+
+Three pieces, three terminals — fastest for day-to-day work since both backend and frontend
+reload on change:
 
 **1. Database**
 
 ```bash
-docker compose up -d
+docker compose up -d postgres
 ```
 
 Starts Postgres on `localhost:5432` (db `brainarena`, user `brainarena` — see
@@ -120,7 +151,10 @@ frontend/
                  room (waiting room + chat + competitors panel, match play, results), tournaments
                  (bracket detail view), admin (question bank)
   public/i18n/   es.json (default) and en.json translation files
-docker-compose.yml   Postgres only — backend and frontend run natively for fast reload
+docker-compose.yml   full stack (postgres + api + web/nginx); `up -d postgres` for the database alone
+backend/Dockerfile, frontend/Dockerfile, frontend/nginx.conf   container images for the full stack
+.claude/agents/      specialist Claude Code subagents (architect, frontend, backend, game design,
+                     monetization, security, QA, AI content, analytics)
 ```
 
 ## Tests
@@ -130,7 +164,7 @@ docker-compose.yml   Postgres only — backend and frontend run natively for fas
 cd backend
 dotnet test tests/BrainArena.Application.Tests
 
-# Backend integration tests (needs `docker compose up -d` running — uses disposable databases
+# Backend integration tests (needs `docker compose up -d postgres` running — uses disposable databases
 # on that Postgres instance; the full match-flow test takes about a minute since it plays through
 # real per-question timing)
 dotnet test tests/BrainArena.IntegrationTests
@@ -177,6 +211,9 @@ afterward is remembered (`localStorage`) and takes over from then on.
   picker in any phase so far.
 - The admin page supports add, edit, and JSON import (matching the brief); there's no delete
   endpoint since the brief didn't ask for one.
+- Rate limits are keyed on the client's IP address. Behind a reverse proxy or load balancer, the
+  app needs forwarded-headers configuration first, or every user would share the proxy's limit.
+  The limits themselves are configurable under `RateLimiting` in `appsettings.json`.
 - Reported chat messages are just flagged (`IsReported = true`) in the database — there's no
   admin moderation view to act on reports yet, since the brief only asked for the Report button
   itself, not a review workflow.

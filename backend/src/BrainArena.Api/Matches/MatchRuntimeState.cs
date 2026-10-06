@@ -8,6 +8,8 @@ namespace BrainArena.Api.Matches;
 internal enum MatchPhase
 {
     Countdown,
+    /// <summary>A server-paced number sequence is being shown; answering isn't open yet.</summary>
+    Flash,
     Question,
     Reveal,
     Finished
@@ -49,10 +51,29 @@ internal class MatchRuntimeState
     public MatchQuestionRuntime CurrentQuestion => Questions[CurrentIndex];
 
     public IReadOnlyList<ScoreboardEntry> BuildScoreboard() =>
-        Players.Values
-            .OrderByDescending(p => p.Score)
+        RankedPlayers()
             .Select(p => new ScoreboardEntry(p.UserId, p.DisplayName, p.Score, p.IsConnected))
             .ToList();
+
+    public IReadOnlyList<PlayerRuntime> RankedPlayers()
+    {
+        var candidates = Players.Values.Select(p =>
+        {
+            var correct = Questions
+                .Select(q => q.Answers.TryGetValue(p.UserId, out var answer) ? answer : null)
+                .Where(answer => answer is { IsCorrect: true })
+                .ToList();
+
+            return new RankingCandidate(
+                p.UserId,
+                p.Score,
+                correct.Count,
+                correct.Aggregate(TimeSpan.Zero, (total, answer) => total + answer!.TimeTaken),
+                p.JoinOrder);
+        });
+
+        return MatchRanking.Order(candidates).Select(c => Players[c.UserId]).ToList();
+    }
 }
 
 internal class MatchQuestionRuntime
@@ -63,12 +84,14 @@ internal class MatchQuestionRuntime
     public ConcurrentDictionary<Guid, PlayerAnswerRuntime> Answers { get; } = new();
 }
 
-internal record PlayerAnswerRuntime(SubmittedAnswer Answer, int PointsAwarded, bool IsCorrect);
+internal record PlayerAnswerRuntime(SubmittedAnswer Answer, int PointsAwarded, bool IsCorrect, TimeSpan TimeTaken);
 
 internal class PlayerRuntime
 {
     public required Guid UserId { get; init; }
     public required string DisplayName { get; init; }
+    /// <summary>Position in the room's join order — the final tie-breaker (see MatchRanking).</summary>
+    public required int JoinOrder { get; init; }
     public int Score { get; set; }
     public bool IsConnected { get; set; } = true;
     public DateTimeOffset? DisconnectedAt { get; set; }

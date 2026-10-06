@@ -1,8 +1,11 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using BrainArena.Api.Auth;
+using BrainArena.Api.Background;
 using BrainArena.Api.Hubs;
 using BrainArena.Api.Matches;
 using BrainArena.Api.Middleware;
+using BrainArena.Api.RateLimiting;
 using BrainArena.Application;
 using BrainArena.Application.Abstractions;
 using BrainArena.Application.Matches;
@@ -10,6 +13,7 @@ using BrainArena.Infrastructure;
 using BrainArena.Infrastructure.Auth;
 using BrainArena.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -26,6 +30,22 @@ builder.Services.AddScoped<ITournamentNotifier, TournamentNotifier>();
 builder.Services.AddSingleton<RoomConnectionTracker>();
 builder.Services.AddSingleton<IMatchOrchestrator, MatchOrchestrator>();
 builder.Services.Configure<MatchTimingOptions>(builder.Configuration.GetSection(MatchTimingOptions.SectionName));
+builder.Services.Configure<GuestCleanupOptions>(builder.Configuration.GetSection(GuestCleanupOptions.SectionName));
+builder.Services.AddHostedService<GuestCleanupService>();
+builder.Services.AddBrainArenaRateLimiting(builder.Configuration);
+
+// Opt-in: only behind a proxy the API is reachable exclusively through (docker-compose's nginx), since
+// trusting X-Forwarded-For from any sender would let clients pick their own rate-limit partition.
+var trustForwardedHeaders = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled");
+if (trustForwardedHeaders)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -74,7 +94,7 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(AuthPolicies.Configure);
 
 var app = builder.Build();
 
@@ -91,6 +111,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+if (trustForwardedHeaders)
+{
+    app.UseForwardedHeaders();
+}
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseCors("AngularDev");
@@ -99,6 +124,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter(); // after authentication: the room-creation policy partitions by user id
 
 app.MapControllers();
 app.MapHub<RoomHub>("/hubs/room");

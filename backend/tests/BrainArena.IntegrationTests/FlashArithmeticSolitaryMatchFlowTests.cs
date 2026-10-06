@@ -1,115 +1,175 @@
+using System.Collections.Concurrent;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BrainArena.Application.Matches;
 using BrainArena.Application.Rooms;
 using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace BrainArena.IntegrationTests;
 
 /// <summary>
-/// Exercises the just-in-time question generation engine end to end: an anonymous (no sign-in)
-/// caller creates a Solitary flash-arithmetic room, gets back an auto-created guest account's
-/// token in the same response, and plays a full match where every round after the first is
-/// generated live based on whether the previous round was answered correctly. This is the test
-/// that proves two things the plan called out as easy to silently regress: (1) TotalQuestions in
-/// every QuestionStarted payload stays constant across the whole match even though
-/// MatchRuntimeState.Questions.Count starts at 1 and grows round by round, and (2) Level actually
-/// rises on a correct answer and drops on a wrong one, alternating in lockstep with a deliberately
-/// alternating correct/wrong answer pattern.
+/// End to end through the just-in-time generation engine and the server-paced flash: an anonymous
+/// caller gets a guest session from the create call, then plays a Solitary flash-arithmetic match
+/// where every number arrives on its own FlashNumber event and answering opens only on
+/// AnswerWindowOpened. Proves: the sequence never ships inside QuestionStarted, an answer submitted
+/// mid-flash is refused, TotalQuestions stays constant while rounds are generated one at a time, and
+/// Level moves up after a correct round and down after a miss.
 /// </summary>
 public class FlashArithmeticSolitaryMatchFlowTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
+    private const int QuestionCount = 5;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
     };
 
     [Fact]
-    public async Task AnonymousCaller_PlaysAFullSolitaryFlashArithmeticMatch_LevelAdaptsAndTotalQuestionsStaysConstant()
+    public async Task AnonymousGuest_PlaysAServerPacedFlashMatch_LevelAdaptsAndAnsweringOnlyOpensAfterTheFlash()
     {
         var client = factory.CreateClient();
 
-        // No Authorization header at all — this is the anonymous-solitary path.
+        // No Authorization header at all — the anonymous-Solitary path.
         var createResponse = await client.PostAsJsonAsync("/api/rooms", new
         {
             name = "Anonymous Flash Practice",
             topic = "Math",
             maxPlayers = 1,
             minPlayersToStart = 1,
-            questionCount = 5,
+            questionCount = QuestionCount,
             secondsPerQuestion = 10,
             isPrivate = false,
             gameMode = FlashArithmeticGameMode.Key,
             kind = "Solitary",
-            difficulty = "Medium"
+            difficulty = "Easy"
         }, JsonOptions);
         createResponse.EnsureSuccessStatusCode();
 
         var created = (await createResponse.Content.ReadFromJsonAsync<CreateRoomResult>(JsonOptions))!;
         Assert.NotNull(created.GuestAuth);
-        var guestToken = created.GuestAuth!.Token;
-        Assert.False(string.IsNullOrWhiteSpace(guestToken));
+        Assert.Equal("Guest", created.GuestAuth!.Role);
         Assert.Equal("InProgress", created.Room.Status.ToString());
         var roomId = created.Room.Id;
+        var guestToken = created.GuestAuth.Token;
+
+        var started = new ConcurrentDictionary<Guid, QuestionClientPayload>();
+        var numbers = new ConcurrentDictionary<Guid, ConcurrentDictionary<int, int>>();
+        var counts = new ConcurrentDictionary<Guid, int>();
+        var opened = new ConcurrentDictionary<Guid, bool>();
+        var toAnswer = new ConcurrentQueue<Guid>();
+        var revealedAnswers = new ConcurrentDictionary<int, decimal>();
+        var matchEnded = new TaskCompletionSource<MatchEndedPayload>();
 
         await using var conn = BuildHubConnection(guestToken);
-
-        var startedByIndex = new Dictionary<int, QuestionClientPayload>();
-        var matchEndedTcs = new TaskCompletionSource<MatchEndedPayload>();
-
-        conn.On<QuestionClientPayload>("QuestionStarted", q => startedByIndex[q.Index] = q);
-        conn.On<MatchEndedPayload>("MatchEnded", m => matchEndedTcs.TrySetResult(m));
-        // The match auto-started synchronously inside the REST call above — MatchResync (not
-        // QuestionStarted) delivers the first live question here, same as SolitaryMatchFlowTests.
+        conn.On<QuestionClientPayload>("QuestionStarted", q => started[q.MatchQuestionId] = q);
+        conn.On<FlashNumberPayload>("FlashNumber", n =>
+        {
+            numbers.GetOrAdd(n.MatchQuestionId, _ => new ConcurrentDictionary<int, int>())[n.Position] = n.Value;
+            counts[n.MatchQuestionId] = n.Count;
+        });
+        conn.On<AnswerWindowOpenedPayload>("AnswerWindowOpened", w =>
+        {
+            opened[w.MatchQuestionId] = true;
+            toAnswer.Enqueue(w.MatchQuestionId);
+        });
+        conn.On<QuestionRevealPayload>("QuestionRevealed", r => revealedAnswers[r.Index] = r.CorrectNumericAnswer!.Value);
+        conn.On<MatchEndedPayload>("MatchEnded", m => matchEnded.TrySetResult(m));
+        // The match auto-started inside the create call, so the first state may arrive as a resync.
         conn.On<MatchResyncPayload>("MatchResync", resync =>
         {
-            if (resync.Phase == "Question" && resync.CurrentQuestion is not null)
+            if (resync.CurrentQuestion is { } q)
             {
-                startedByIndex[resync.CurrentQuestion.Index] = resync.CurrentQuestion;
+                started[q.MatchQuestionId] = q;
+                if (resync.Phase == "Question")
+                {
+                    opened[q.MatchQuestionId] = true;
+                    toAnswer.Enqueue(q.MatchQuestionId);
+                }
             }
         });
 
         await conn.StartAsync();
         await conn.InvokeAsync("JoinRoomGroup", roomId);
 
-        // Deliberately alternating so the test proves both directions: round 0 answered correctly,
-        // round 1 wrong, round 2 correctly, round 3 wrong, round 4 correctly (the last round's
-        // answer never gets observed by a next round, since the match ends after it).
+        // Alternating so both directions of the adaptive Level get exercised.
         bool[] answerCorrectly = [true, false, true, false, true];
-        var answeredIndexes = new HashSet<int>();
-        var deadline = DateTime.UtcNow.AddSeconds(90);
+        var submitted = new Dictionary<int, decimal>();
+        bool? earlyAnswerRefused = null;
+        var deadline = DateTime.UtcNow.AddSeconds(150);
 
-        while (!matchEndedTcs.Task.IsCompleted && DateTime.UtcNow < deadline)
+        while (!matchEnded.Task.IsCompleted && DateTime.UtcNow < deadline)
         {
-            foreach (var (index, q) in startedByIndex)
+            // Mid-flash (at least one number still to come), answering must be refused.
+            if (earlyAnswerRefused is null)
             {
-                if (answeredIndexes.Add(index))
+                var flashing = numbers.FirstOrDefault(kv =>
+                    !opened.ContainsKey(kv.Key) && counts.TryGetValue(kv.Key, out var count) &&
+                    !kv.Value.IsEmpty && kv.Value.Keys.Max() < count - 1);
+                if (flashing.Key != Guid.Empty)
                 {
-                    var sum = q.Text.Split(',').Select(int.Parse).Sum();
-                    var submitted = answerCorrectly[index] ? sum : sum + 1;
-                    await conn.InvokeAsync("SubmitAnswer", roomId, q.MatchQuestionId, null, (decimal)submitted);
+                    try
+                    {
+                        await conn.InvokeAsync("SubmitAnswer", roomId, flashing.Key, null, 1m);
+                        earlyAnswerRefused = false;
+                    }
+                    catch (HubException)
+                    {
+                        earlyAnswerRefused = true;
+                    }
                 }
             }
 
-            await Task.Delay(200);
+            while (toAnswer.TryDequeue(out var matchQuestionId))
+            {
+                var question = started[matchQuestionId];
+                // Joined too late to see every number of this round: leave it unanswered (a miss).
+                if (!counts.TryGetValue(matchQuestionId, out var count) ||
+                    !numbers.TryGetValue(matchQuestionId, out var seen) || seen.Count != count)
+                {
+                    continue;
+                }
+
+                var sum = seen.Values.Sum();
+                decimal answer = answerCorrectly[question.Index] ? sum : sum + 1;
+                await conn.InvokeAsync("SubmitAnswer", roomId, matchQuestionId, null, answer);
+                submitted[question.Index] = answer;
+            }
+
+            await Task.Delay(50);
         }
 
-        Assert.True(matchEndedTcs.Task.IsCompletedSuccessfully, "The solo flash-arithmetic match did not finish within the expected time.");
-        await matchEndedTcs.Task;
+        Assert.True(matchEnded.Task.IsCompletedSuccessfully, "The solo flash-arithmetic match did not finish within the expected time.");
+        Assert.True(earlyAnswerRefused, "An answer submitted while numbers were still flashing was not refused.");
 
-        Assert.Equal(5, startedByIndex.Count);
-        // The bug this test guards against: TotalQuestions must report the match's true target
-        // count from round 0 onward, never grow live as MatchRuntimeState.Questions fills in.
-        Assert.All(startedByIndex.Values, q => Assert.Equal(5, q.TotalQuestions));
+        var rounds = started.Values.OrderBy(q => q.Index).ToList();
+        Assert.Equal(QuestionCount, rounds.Count);
+        Assert.All(rounds, q => Assert.Equal(QuestionCount, q.TotalQuestions));
+        Assert.All(rounds, q => Assert.Equal(string.Empty, q.Text));
 
-        var levelByIndex = startedByIndex.ToDictionary(kv => kv.Key, kv => kv.Value.Level);
-        Assert.Equal(3, levelByIndex[0]); // Medium's starting Level
-        Assert.Equal(4, levelByIndex[1]); // round 0 was correct -> Level rose
-        Assert.Equal(3, levelByIndex[2]); // round 1 was wrong -> Level dropped
-        Assert.Equal(4, levelByIndex[3]); // round 2 was correct -> Level rose
-        Assert.Equal(3, levelByIndex[4]); // round 3 was wrong -> Level dropped
+        // Level is Easy's baseline in round 0, then follows the previous round's actual outcome.
+        Assert.Equal(1, rounds[0].Level);
+        var rises = 0;
+        var drops = 0;
+        for (var i = 1; i < rounds.Count; i++)
+        {
+            var previousCorrect = submitted.TryGetValue(i - 1, out var given) && given == revealedAnswers[i - 1];
+            var expected = Math.Clamp(rounds[i - 1].Level!.Value + (previousCorrect ? 1 : -1), 1, 20);
+            Assert.Equal(expected, rounds[i].Level);
+            if (rounds[i].Level > rounds[i - 1].Level) rises++;
+            if (rounds[i].Level < rounds[i - 1].Level) drops++;
+        }
+        Assert.True(rises > 0 && drops > 0, $"Expected the Level to both rise and drop (rises={rises}, drops={drops}).");
+
+        // A guest session can still read its own practice results.
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", guestToken);
+        var resultsResponse = await client.GetAsync($"/api/rooms/{roomId}/results");
+        resultsResponse.EnsureSuccessStatusCode();
+        var results = (await resultsResponse.Content.ReadFromJsonAsync<MatchResultsDto>(JsonOptions))!;
+        Assert.Equal(created.GuestAuth.UserId, Assert.Single(results.Ranking).UserId);
     }
 
     private HubConnection BuildHubConnection(string token)

@@ -1,9 +1,10 @@
-import { Component, OnDestroy, effect, input, output, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, OnDestroy, computed, effect, input, output, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { QuestionRevealedEvent, QuestionStartedEvent } from '../../../../core/models/match.model';
+import { FlashNumberEvent, QuestionRevealedEvent, QuestionStartedEvent } from '../../../../core/models/match.model';
 import { ErrorBanner } from '../../../../shared/error-banner/error-banner';
 
+/** 'flash' = a number is showing, 'gap' = black screen between numbers, 'input' = answering is open. */
 type Stage = 'flash' | 'gap' | 'input';
 
 @Component({
@@ -17,6 +18,10 @@ export class FlashArithmeticPanel implements OnDestroy {
   readonly question = input.required<QuestionStartedEvent>();
   /** Only set once the question has closed. */
   readonly reveal = input<QuestionRevealedEvent | null>(null);
+  /** Server-paced: each number arrives at its own display moment and is never known in advance. */
+  readonly flashNumber = input<FlashNumberEvent | null>(null);
+  /** Opens only after the server has shown the last number. */
+  readonly answerWindowOpen = input(false);
   readonly answerLocked = input(false);
   /** False for a spectator — the input is hidden entirely. */
   readonly canAnswer = input(true);
@@ -36,30 +41,35 @@ export class FlashArithmeticPanel implements OnDestroy {
   readonly answerSubmitted = output<number>();
 
   readonly answerControl = new FormControl('', { nonNullable: true, validators: [Validators.required] });
+  // (ngSubmit) only exists under a FormGroupDirective — without one, the native submit reloads the page.
+  readonly answerForm = new FormGroup({ answer: this.answerControl });
 
-  /** 'flash' = a number is showing, 'gap' = black screen between numbers, 'input' = all shown, answer now. */
-  readonly stage = signal<Stage>('flash');
   readonly currentNumber = signal<number | null>(null);
+  // A number still on screen wins over an already-open answer window: on a lagging device the last
+  // number and AnswerWindowOpened can land in the same render, and the player must still see it.
+  readonly stage = computed<Stage>(() =>
+    this.currentNumber() !== null ? 'flash' : this.answerWindowOpen() ? 'input' : 'gap'
+  );
 
-  private numbers: number[] = [];
-  private timers: ReturnType<typeof setTimeout>[] = [];
+  private hideTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
-    // A fresh question arrives as a new object reference each time — reset local flash state and
-    // (for a question-phase instance only; a reveal-phase instance never flashes anything) kick
-    // off the flash sequence. Client-side validation is UX only; the server remains the sole
-    // authority on correctness.
+    // A fresh question arrives as a new object reference each time — clear any leftover input.
     effect(() => {
-      const q = this.question();
-      this.clearTimers();
+      this.question();
       this.answerControl.reset('');
-      this.numbers = q.text.split(',').map(Number);
-      this.stage.set('flash');
-      this.currentNumber.set(null);
+    });
 
-      if (this.phase() === 'question') {
-        this.runFlashSequence(q.level ?? 1);
+    // Show each number for its full display time from when it arrives, then blank to the black screen.
+    effect(() => {
+      const flash = this.flashNumber();
+      clearTimeout(this.hideTimer);
+      if (!flash) {
+        this.currentNumber.set(null);
+        return;
       }
+      this.currentNumber.set(flash.value);
+      this.hideTimer = setTimeout(() => this.currentNumber.set(null), flash.visibleMs);
     });
 
     // Disabled state is driven through the FormControl itself, not a template [disabled]
@@ -75,42 +85,8 @@ export class FlashArithmeticPanel implements OnDestroy {
     });
   }
 
-  private runFlashSequence(level: number): void {
-    // Frontend-only speed-up as Level rises — the number count itself is capped server-side, so a
-    // long streak can never eat the whole answer window before the player gets to respond.
-    const flashMs = Math.max(350, 900 - level * 30);
-    const gapMs = Math.max(150, Math.round(flashMs * 0.35));
-
-    let i = 0;
-    const showNext = (): void => {
-      if (i >= this.numbers.length) {
-        this.stage.set('input');
-        this.currentNumber.set(null);
-        return;
-      }
-
-      this.stage.set('flash');
-      this.currentNumber.set(this.numbers[i]);
-      i++;
-      this.timers.push(
-        setTimeout(() => {
-          this.stage.set('gap');
-          this.currentNumber.set(null);
-          this.timers.push(setTimeout(showNext, gapMs));
-        }, flashMs)
-      );
-    };
-
-    showNext();
-  }
-
   ngOnDestroy(): void {
-    this.clearTimers();
-  }
-
-  private clearTimers(): void {
-    this.timers.forEach((t) => clearTimeout(t));
-    this.timers = [];
+    clearTimeout(this.hideTimer);
   }
 
   submit(): void {

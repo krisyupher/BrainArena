@@ -6,6 +6,7 @@ import { RoomHubService } from '../../../core/services/room-hub.service';
 import { RoomService } from '../../../core/services/room.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
+  FlashNumberEvent,
   MatchResyncEvent,
   MatchSpectatorSyncEvent,
   QuestionRevealedEvent,
@@ -43,6 +44,10 @@ export class MatchPlay implements OnInit, OnDestroy {
   readonly errorMessage = signal<string | null>(null);
   /** Unknown until the room detail lookup resolves — the answer UI stays hidden until then. */
   readonly isParticipant = signal<boolean | null>(null);
+  /** The latest server-paced flash number for the current question (flash-arithmetic only). */
+  readonly flashNumber = signal<FlashNumberEvent | null>(null);
+  /** Always true except for a flash-arithmetic question whose numbers are still being shown. */
+  readonly answerWindowOpen = signal(true);
 
   /**
    * Flash-arithmetic HUD state — lives here, not in FlashArithmeticPanel, because match-play.html
@@ -66,9 +71,9 @@ export class MatchPlay implements OnInit, OnDestroy {
     return this.auth.currentUser()?.userId;
   }
 
-  /** Any signed-in user can chat/react here, whether they're playing or just spectating. */
-  get isSignedIn(): boolean {
-    return this.auth.isAuthenticated();
+  /** Any registered user can chat/react here, playing or spectating — not a guest practice session. */
+  get isRegistered(): boolean {
+    return this.auth.isRegistered();
   }
 
   get competitors(): CompetitorViewModel[] {
@@ -122,9 +127,28 @@ export class MatchPlay implements OnInit, OnDestroy {
         this.reveal.set(null);
         this.selectedOption.set(null);
         this.mySubmittedAnswer.set(null);
+        this.flashNumber.set(null);
+        this.answerWindowOpen.set(event.kind !== 'flash-arithmetic');
         this.answerLocked.set(false);
         this.errorMessage.set(null);
         this.setEndsAt(new Date(event.endsAtUtc));
+      })
+    );
+
+    this.subscriptions.add(
+      this.roomHub.flashNumber.subscribe((event) => {
+        if (event.matchQuestionId === this.currentQuestion()?.matchQuestionId) {
+          this.flashNumber.set(event);
+        }
+      })
+    );
+
+    this.subscriptions.add(
+      this.roomHub.answerWindowOpened.subscribe((event) => {
+        if (event.matchQuestionId === this.currentQuestion()?.matchQuestionId) {
+          this.answerWindowOpen.set(true);
+          this.setEndsAt(new Date(event.endsAtUtc));
+        }
       })
     );
 
@@ -194,7 +218,7 @@ export class MatchPlay implements OnInit, OnDestroy {
 
   submitNumeric(value: number): void {
     const question = this.currentQuestion();
-    if (!this.isParticipant() || this.answerLocked() || this.phase() !== 'question' || !question) {
+    if (!this.isParticipant() || this.answerLocked() || this.phase() !== 'question' || !this.answerWindowOpen() || !question) {
       return;
     }
 
@@ -208,9 +232,12 @@ export class MatchPlay implements OnInit, OnDestroy {
 
   private applySync(sync: MatchResyncEvent | MatchSpectatorSyncEvent): void {
     this.scoreboard.set(sync.scoreboard);
-    if (sync.phase === 'Question' && sync.currentQuestion) {
+    this.flashNumber.set(null);
+    if ((sync.phase === 'Question' || sync.phase === 'Flash') && sync.currentQuestion) {
       this.phase.set('question');
       this.currentQuestion.set(sync.currentQuestion);
+      // Mid-flash, the remaining numbers (and AnswerWindowOpened) still arrive live.
+      this.answerWindowOpen.set(sync.phase === 'Question');
       this.setEndsAt(new Date(sync.currentQuestion.endsAtUtc));
     } else if (sync.phase === 'Reveal' && sync.currentReveal) {
       this.phase.set('reveal');

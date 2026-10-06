@@ -1,10 +1,10 @@
 @if (phase() === 'question') {
   @if (canAnswer()) {
-    <form class="numeric-form" (ngSubmit)="submit()">
+    <form class="numeric-form" [formGroup]="answerForm" (ngSubmit)="submit()">
       <input
         type="number"
         inputmode="decimal"
-        [formControl]="answerControl"
+        formControlName="answer"
         [placeholder]="'match.numericAnswerPlaceholder' | transloco"
       />
       <button type="submit" [disabled]="answerLocked() || answerControl.invalid">

@@ -1,3 +1,4 @@
+using System.Globalization;
 using BrainArena.Application.Abstractions;
 using BrainArena.Application.Common;
 using BrainArena.Domain.Entities;
@@ -8,8 +9,9 @@ namespace BrainArena.Application.Matches;
 /// <summary>
 /// Numbers flash on screen one at a time; the player types the sum once they're all shown. Like
 /// CalculationGameMode, every problem is a fresh, not-yet-persisted Question (Text = a
-/// comma-delimited number sequence, e.g. "23,7,45,12" — the frontend flashes each one in turn
-/// rather than displaying Text directly; CorrectNumericAnswer = the sum).
+/// comma-delimited number sequence, e.g. "23,7,45,12"; CorrectNumericAnswer = the sum). Text is
+/// never sent to clients while a question is live — MatchOrchestrator streams it one number at a
+/// time via GetFlashSequence, so the sum can't be read off the wire before the flash finishes.
 ///
 /// Multiplayer/Tournament rooms use the ordinary upfront PrepareQuestionsAsync path — every round
 /// generated at the SAME fixed Level (derived from Room.Difficulty), identical for every player,
@@ -31,10 +33,15 @@ public class FlashArithmeticGameMode : IGameMode
     private const int MaxLevel = 20;
 
     // Number-count growth is capped — beyond this, further Level increases only speed up the
-    // flash (a frontend-only concern, mirrored from Level) rather than adding more numbers,
-    // so a long streak can never eat the whole answer window before the player gets to respond.
+    // flash (see GetFlashSequence) rather than adding more numbers.
     private const int MinNumberCount = 3;
     private const int MaxNumberCount = 8;
+
+    private const int BaseVisibleMs = 900;
+    private const int VisibleMsPerLevel = 30;
+    private const int MinVisibleMs = 350;
+    private const int MinGapMs = 150;
+    private const double GapRatio = 0.35;
 
     public string ModeKey => Key;
 
@@ -74,10 +81,19 @@ public class FlashArithmeticGameMode : IGameMode
             index,
             totalQuestions,
             Key,
-            question.Text,
+            string.Empty, // the numbers ARE the answer — they only ever go out via FlashNumber events
             null,
             endsAtUtc,
             question.Difficulty);
+    }
+
+    public FlashSequence GetFlashSequence(MatchQuestion matchQuestion)
+    {
+        var question = RequireQuestion(matchQuestion);
+        var numbers = question.Text.Split(',').Select(n => int.Parse(n, CultureInfo.InvariantCulture)).ToList();
+        var visibleMs = Math.Max(MinVisibleMs, BaseVisibleMs - question.Difficulty * VisibleMsPerLevel);
+        var gapMs = Math.Max(MinGapMs, (int)Math.Round(visibleMs * GapRatio));
+        return new FlashSequence(numbers, TimeSpan.FromMilliseconds(visibleMs), TimeSpan.FromMilliseconds(gapMs));
     }
 
     public QuestionRevealPayload ToRevealPayload(

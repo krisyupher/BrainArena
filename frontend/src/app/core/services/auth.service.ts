@@ -23,6 +23,9 @@ export class AuthService {
   readonly currentUser = computed(() => this.authState());
   readonly isAuthenticated = computed(() => this.authState() !== null);
   readonly isAdmin = computed(() => this.authState()?.role === 'Admin');
+  /** A guest session can play its own Solitary practice rooms and nothing shared (server-enforced). */
+  readonly isGuest = computed(() => this.authState()?.role === 'Guest');
+  readonly isRegistered = computed(() => this.isAuthenticated() && !this.isGuest());
   readonly token = computed(() => this.authState()?.token ?? null);
 
   register(email: string, password: string, displayName: string): Observable<AuthResponse> {

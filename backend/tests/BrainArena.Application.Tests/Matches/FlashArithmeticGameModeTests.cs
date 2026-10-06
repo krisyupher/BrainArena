@@ -63,17 +63,62 @@ public class FlashArithmeticGameModeTests
     }
 
     [Fact]
-    public void ToClientPayload_NeverIncludesTheCorrectSum_ButDoesIncludeTheLevel()
+    public void ToClientPayload_NeverIncludesTheNumbers_ButDoesIncludeTheLevel()
     {
         var matchQuestion = BuildMatchQuestion(text: "20,22", level: 5);
 
         var payload = mode.ToClientPayload(matchQuestion, index: 0, totalQuestions: 5, DateTimeOffset.UtcNow);
 
         Assert.Equal(FlashArithmeticGameMode.Key, payload.Kind);
-        Assert.Equal("20,22", payload.Text);
+        // The numbers are the answer — they're only streamed one at a time via GetFlashSequence.
+        Assert.Equal(string.Empty, payload.Text);
         Assert.Null(payload.Options);
         Assert.Equal(5, payload.Level);
-        // QuestionClientPayload has no numeric-answer field at all — structurally impossible to leak it here.
+    }
+
+    [Fact]
+    public void GetFlashSequence_ParsesTheNumbersInOrder()
+    {
+        var matchQuestion = BuildMatchQuestion(text: "23,7,45,12", correctAnswer: 87m, level: 3);
+
+        var sequence = mode.GetFlashSequence(matchQuestion);
+
+        Assert.Equal([23, 7, 45, 12], sequence.Numbers);
+    }
+
+    [Fact]
+    public void GetFlashSequence_ShowsEachNumberForLessTimeAsLevelRises()
+    {
+        var slow = mode.GetFlashSequence(BuildMatchQuestion(level: 1));
+        var fast = mode.GetFlashSequence(BuildMatchQuestion(level: 10));
+
+        Assert.True(fast.VisibleFor < slow.VisibleFor);
+        Assert.True(fast.GapAfter < slow.GapAfter);
+    }
+
+    [Fact]
+    public void GetFlashSequence_NeverDropsBelowAReadableMinimum()
+    {
+        var sequence = mode.GetFlashSequence(BuildMatchQuestion(level: 20));
+
+        Assert.Equal(TimeSpan.FromMilliseconds(350), sequence.VisibleFor);
+        Assert.Equal(TimeSpan.FromMilliseconds(150), sequence.GapAfter);
+    }
+
+    [Fact]
+    public void FlashSequence_TotalDuration_HasNoTrailingGapAfterTheLastNumber()
+    {
+        var sequence = new FlashSequence([1, 2, 3], TimeSpan.FromMilliseconds(800), TimeSpan.FromMilliseconds(300));
+
+        Assert.Equal(TimeSpan.FromMilliseconds(3 * 800 + 2 * 300), sequence.TotalDuration);
+    }
+
+    [Fact]
+    public void OtherModes_AreNotFlashSequences()
+    {
+        IGameMode calculation = new CalculationGameMode();
+
+        Assert.Null(calculation.GetFlashSequence(BuildMatchQuestion()));
     }
 
     [Fact]

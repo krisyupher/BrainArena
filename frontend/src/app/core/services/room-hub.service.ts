@@ -3,6 +3,8 @@ import * as signalR from '@microsoft/signalr';
 import { Subject } from 'rxjs';
 import { AuthService } from './auth.service';
 import {
+  AnswerWindowOpenedEvent,
+  FlashNumberEvent,
   MatchEndedEvent,
   MatchResyncEvent,
   MatchSpectatorSyncEvent,
@@ -29,6 +31,8 @@ export class RoomHubService {
   readonly matchStarting = new Subject<{ matchId: string; countdownSeconds: number }>();
   readonly matchStartFailed = new Subject<string>();
   readonly questionStarted = new Subject<QuestionStartedEvent>();
+  readonly flashNumber = new Subject<FlashNumberEvent>();
+  readonly answerWindowOpened = new Subject<AnswerWindowOpenedEvent>();
   readonly answerAccepted = new Subject<string>();
   readonly questionRevealed = new Subject<QuestionRevealedEvent>();
   readonly matchEnded = new Subject<MatchEndedEvent>();
@@ -62,6 +66,8 @@ export class RoomHubService {
     );
     connection.on('MatchStartFailed', (message: string) => this.matchStartFailed.next(message));
     connection.on('QuestionStarted', (payload: QuestionStartedEvent) => this.questionStarted.next(payload));
+    connection.on('FlashNumber', (payload: FlashNumberEvent) => this.flashNumber.next(payload));
+    connection.on('AnswerWindowOpened', (payload: AnswerWindowOpenedEvent) => this.answerWindowOpened.next(payload));
     connection.on('AnswerAccepted', (matchQuestionId: string) => this.answerAccepted.next(matchQuestionId));
     connection.on('QuestionRevealed', (payload: QuestionRevealedEvent) => this.questionRevealed.next(payload));
     connection.on('MatchEnded', (payload: MatchEndedEvent) => this.matchEnded.next(payload));

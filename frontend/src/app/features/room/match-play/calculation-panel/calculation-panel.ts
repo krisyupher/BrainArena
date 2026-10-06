@@ -1,5 +1,5 @@
 import { Component, effect, input, output } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { QuestionRevealedEvent, QuestionStartedEvent } from '../../../../core/models/match.model';
 import { ErrorBanner } from '../../../../shared/error-banner/error-banner';
@@ -23,6 +23,8 @@ export class CalculationPanel {
   readonly answerSubmitted = output<number>();
 
   readonly answerControl = new FormControl('', { nonNullable: true, validators: [Validators.required] });
+  // (ngSubmit) only exists under a FormGroupDirective — without one, the native submit reloads the page.
+  readonly answerForm = new FormGroup({ answer: this.answerControl });
 
   constructor() {
     // A fresh question arrives as a new object reference each time — clear any leftover input.

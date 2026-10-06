@@ -1,4 +1,5 @@
 using System.Reflection;
+using BrainArena.Api.Auth;
 using BrainArena.Api.Hubs;
 using Microsoft.AspNetCore.Authorization;
 
@@ -45,6 +46,20 @@ public class RoomHubAuthorizationTests
 
     public static IEnumerable<object[]> AuthenticatedOnlyMethods() =>
         AuthenticatedOnlyMethodNames.Select(name => new object[] { name });
+
+    /// <summary>Guest sessions are Solitary-practice-only — these must exclude them, not just require sign-in.</summary>
+    [Theory]
+    [InlineData(nameof(RoomHub.StartNow))]
+    [InlineData(nameof(RoomHub.SendChatMessage))]
+    [InlineData(nameof(RoomHub.ReportChatMessage))]
+    [InlineData(nameof(RoomHub.SendReaction))]
+    public void RegisteredOnlyMethod_RequiresTheRegisteredUserPolicy(string methodName)
+    {
+        var method = typeof(RoomHub).GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)
+            ?? throw new InvalidOperationException($"RoomHub no longer has a method named '{methodName}'.");
+
+        Assert.Contains(method.GetCustomAttributes<AuthorizeAttribute>(), a => a.Policy == AuthPolicies.RegisteredUser);
+    }
 
     [Theory]
     [InlineData(nameof(RoomHub.JoinAsSpectator))]

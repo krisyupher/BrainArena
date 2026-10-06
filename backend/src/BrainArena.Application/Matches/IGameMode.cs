@@ -61,6 +61,9 @@ public interface IGameMode
     Task<(Question Question, int NextAdaptiveState)> PrepareNextQuestionAsync(
         Room room, int currentAdaptiveState, bool? previousAnswerWasCorrect, IQuestionRepository questionRepo, CancellationToken ct)
         => throw new NotSupportedException($"{ModeKey} does not support incremental generation.");
+
+    /// <summary>Non-null for a question MatchOrchestrator must reveal server-paced, one number at a time.</summary>
+    FlashSequence? GetFlashSequence(MatchQuestion matchQuestion) => null;
 }
 
 public interface IGameModeRegistry

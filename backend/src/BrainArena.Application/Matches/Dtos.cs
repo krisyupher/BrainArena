@@ -24,6 +24,19 @@ public record QuestionClientPayload(
     DateTimeOffset EndsAtUtc,
     int? Level = null);
 
+/// <summary>
+/// A question whose content the server reveals one number at a time on its own clock, instead of
+/// sending it whole — each number goes out at its display moment, and answering opens after the last.
+/// </summary>
+public record FlashSequence(IReadOnlyList<int> Numbers, TimeSpan VisibleFor, TimeSpan GapAfter)
+{
+    public TimeSpan TotalDuration => VisibleFor * Numbers.Count + GapAfter * Math.Max(0, Numbers.Count - 1);
+}
+
+public record FlashNumberPayload(Guid MatchQuestionId, int Position, int Count, int Value, int VisibleMs);
+
+public record AnswerWindowOpenedPayload(Guid MatchQuestionId, DateTimeOffset EndsAtUtc);
+
 public record ScoreboardEntry(Guid UserId, string DisplayName, int Score, bool IsConnected);
 
 public record QuestionRevealPayload(

@@ -37,9 +37,9 @@
           }
         </ul>
 
-        @if (!isMember && auth.isAuthenticated()) {
+        @if (!isMember && auth.isRegistered()) {
           <button type="button" [disabled]="busy()" (click)="join()">{{ 'tournaments.join' | transloco }}</button>
-        } @else if (!auth.isAuthenticated()) {
+        } @else if (!auth.isRegistered()) {
           <a routerLink="/login">{{ 'room.signUpToPlay' | transloco }}</a>
         }
 

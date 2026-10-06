@@ -1,20 +1,24 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTransloco } from '@jsverse/transloco';
 import { FlashArithmeticPanel } from './flash-arithmetic-panel';
-import { QuestionRevealedEvent, QuestionStartedEvent } from '../../../../core/models/match.model';
+import { FlashNumberEvent, QuestionRevealedEvent, QuestionStartedEvent } from '../../../../core/models/match.model';
 
-function buildQuestion(text: string, level = 1): QuestionStartedEvent {
+function buildQuestion(level = 1): QuestionStartedEvent {
   return {
     matchId: 'match-1',
     matchQuestionId: 'q-1',
     index: 0,
     totalQuestions: 5,
     kind: 'flash-arithmetic',
-    text,
+    text: '',
     options: null,
     endsAtUtc: new Date(Date.now() + 20000).toISOString(),
     level
   };
+}
+
+function flash(position: number, value: number, visibleMs = 800): FlashNumberEvent {
+  return { matchQuestionId: 'q-1', position, count: 3, value, visibleMs };
 }
 
 describe('FlashArithmeticPanel', () => {
@@ -29,42 +33,88 @@ describe('FlashArithmeticPanel', () => {
 
     fixture = TestBed.createComponent(FlashArithmeticPanel);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('phase', 'question');
+    fixture.componentRef.setInput('question', buildQuestion());
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('flashes every number in sequence and then reveals the numeric input', () => {
+  it('shows each server-sent number, then blanks to the black screen after its display time', () => {
     vi.useFakeTimers();
-    fixture.componentRef.setInput('phase', 'question');
-    fixture.componentRef.setInput('question', buildQuestion('5,7,3', 1));
     fixture.detectChanges();
+    expect(component.stage()).toBe('gap');
 
+    fixture.componentRef.setInput('flashNumber', flash(0, 7, 800));
+    fixture.detectChanges();
     expect(component.stage()).toBe('flash');
-    expect(component.currentNumber()).toBe(5);
+    expect(component.currentNumber()).toBe(7);
 
-    vi.advanceTimersByTime(10000);
+    vi.advanceTimersByTime(800);
     fixture.detectChanges();
-
-    expect(component.stage()).toBe('input');
+    expect(component.stage()).toBe('gap');
     expect(component.currentNumber()).toBeNull();
+
+    fixture.componentRef.setInput('flashNumber', flash(1, 12));
+    fixture.detectChanges();
+    expect(component.currentNumber()).toBe(12);
   });
 
-  it('emits the submitted sum once the flash sequence has finished', () => {
+  it('lets the last number finish its display time even if the answer window opens meanwhile', () => {
     vi.useFakeTimers();
-    fixture.componentRef.setInput('phase', 'question');
-    fixture.componentRef.setInput('question', buildQuestion('5,7,3', 1));
+    fixture.componentRef.setInput('flashNumber', flash(2, 69, 800));
+    fixture.componentRef.setInput('answerWindowOpen', true);
     fixture.detectChanges();
-    vi.advanceTimersByTime(10000);
+    expect(component.stage()).toBe('flash');
+    expect(component.currentNumber()).toBe(69);
+
+    vi.advanceTimersByTime(800);
+    fixture.detectChanges();
+    expect(component.stage()).toBe('input');
+  });
+
+  it('keeps the answer input closed until the server opens the answer window', () => {
+    vi.useFakeTimers();
+    fixture.componentRef.setInput('flashNumber', flash(2, 3));
+    fixture.detectChanges();
+    vi.advanceTimersByTime(800);
     fixture.detectChanges();
 
     let emitted: number | null = null;
     component.answerSubmitted.subscribe((v) => (emitted = v));
-    component.answerControl.setValue('15');
+    component.answerControl.setValue('22');
     component.submit();
+    expect(emitted).toBeNull();
+    expect(component.answerControl.disabled).toBe(true);
 
-    expect(emitted).toBe(15);
+    fixture.componentRef.setInput('answerWindowOpen', true);
+    fixture.detectChanges();
+    expect(component.stage()).toBe('input');
+    expect(component.answerControl.enabled).toBe(true);
+
+    component.answerControl.setValue('22');
+    component.submit();
+    expect(emitted).toBe(22);
+  });
+
+  it('submits through the form element without letting the browser do a native, page-reloading submit', () => {
+    fixture.componentRef.setInput('answerWindowOpen', true);
+    fixture.detectChanges();
+
+    let emitted: number | null = null;
+    component.answerSubmitted.subscribe((v) => (emitted = v));
+
+    const host = fixture.nativeElement as HTMLElement;
+    const input = host.querySelector('.numeric-form input') as HTMLInputElement;
+    input.value = '22';
+    input.dispatchEvent(new Event('input'));
+
+    const submit = new Event('submit', { cancelable: true });
+    host.querySelector('.numeric-form')!.dispatchEvent(submit);
+
+    expect(submit.defaultPrevented).toBe(true);
+    expect(emitted).toBe(22);
   });
 
   it('reveal phase shows a checkmark when the submitted answer matched, otherwise the correct sum', () => {
@@ -81,7 +131,6 @@ describe('FlashArithmeticPanel', () => {
     };
 
     fixture.componentRef.setInput('phase', 'reveal');
-    fixture.componentRef.setInput('question', buildQuestion('5,7,3', 1));
     fixture.componentRef.setInput('reveal', reveal);
     fixture.componentRef.setInput('mySubmittedAnswer', 15);
     fixture.detectChanges();

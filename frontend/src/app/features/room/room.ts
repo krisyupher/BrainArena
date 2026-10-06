@@ -41,9 +41,9 @@ export class Room implements OnInit, OnDestroy {
     return !!room && !!userId && room.players.some((p) => p.userId === userId);
   }
 
-  /** Any signed-in user can chat/react here, whether they're playing or just spectating. */
-  get isSignedIn(): boolean {
-    return this.auth.isAuthenticated();
+  /** Any registered user can chat/react here, playing or spectating — not a guest practice session. */
+  get isRegistered(): boolean {
+    return this.auth.isRegistered();
   }
 
   get myUserId(): string | undefined {

@@ -39,7 +39,7 @@
       }
     </div>
 
-    <app-chat [roomId]="roomId" />
+    <app-chat [roomId]="roomId" [canSend]="auth.isRegistered()" />
 
     <a routerLink="/lobby" class="back-link">{{ 'match.backToLobby' | transloco }}</a>
   }

@@ -28,6 +28,8 @@
           <app-flash-arithmetic-panel
             phase="question"
             [question]="q"
+            [flashNumber]="flashNumber()"
+            [answerWindowOpen]="answerWindowOpen()"
             [answerLocked]="answerLocked()"
             [canAnswer]="!!isParticipant()"
             [errorMessage]="errorMessage()"
@@ -74,7 +76,7 @@
   </div>
 
   <div class="page-sidebar">
-    <app-competitors-panel [competitors]="competitors" [myUserId]="myUserId" [roomId]="roomId" [canReact]="isSignedIn" />
-    <app-chat [roomId]="roomId" [canSend]="isSignedIn" />
+    <app-competitors-panel [competitors]="competitors" [myUserId]="myUserId" [roomId]="roomId" [canReact]="isRegistered" />
+    <app-chat [roomId]="roomId" [canSend]="isRegistered" />
   </div>
 </div>
